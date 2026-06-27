@@ -1,0 +1,17 @@
+{
+  "id": "NeowCompanions",
+  "name": "Neow Companions",
+  "author": "Alex Allen",
+  "description": "After choosing Neow's starting relic, choose one of three random companion options.",
+  "version": "v0.1.0",
+  "min_game_version": "0.107.0",
+  "has_pck": false,
+  "has_dll": true,
+  "dependencies": [
+    {
+      "id": "BaseLib",
+      "min_version": "3.3.0"
+    }
+  ],
+  "affects_gameplay": true
+}
