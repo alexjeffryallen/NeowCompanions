@@ -1,0 +1,28 @@
+{
+  "CHOOSE_COMPANION": {
+    "title": "Choose a companion.",
+    "description": "Choose a companion."
+  },
+  "BYRDPIP": {
+    "title": "Byrdpip",
+    "description": "Gain Byrdpip as your companion."
+  },
+  "SOUL_FYSH": {
+    "title": "Soul Fysh Pip",
+    "description": "Gain Soul Fysh Pip as your companion."
+  },
+  "WRIGGLER": {
+    "title": "Wriggler",
+    "description": "Gain Wriggler as your companion."
+  },
+  "ALWAYSSOULFYSHPIP-SOUL_FYSH_PIP_RELIC": {
+    "title": "Soul Fysh Pip",
+    "description": "At the start of each combat, summon Soul Fysh Pip.",
+    "flavor": "A tiny echo of the deep answers Neow's call."
+  },
+  "ALWAYSSOULFYSHPIP-WRIGGLER_RELIC": {
+    "title": "Wriggler",
+    "description": "At the start of each combat, summon Wriggler.",
+    "flavor": "Small, determined, and already chewing on destiny."
+  }
+}

@@ -1,0 +1,56 @@
+using System;
+using System.Reflection;
+using System.Threading.Tasks;
+using AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Models;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Models.Powers;
+
+namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Patches;
+
+[HarmonyPatch]
+public static class ByrdSwoopPlayPatch
+{
+    public static MethodBase TargetMethod()
+    {
+        return AccessTools.Method(
+            typeof(ByrdSwoop),
+            "OnPlay",
+            [typeof(PlayerChoiceContext), typeof(CardPlay)]);
+    }
+
+    public static bool Prefix(ByrdSwoop __instance, PlayerChoiceContext choiceContext, CardPlay cardPlay, ref Task __result)
+    {
+        __result = PlayFyshSwoop(__instance, choiceContext, cardPlay);
+        return false;
+    }
+
+    private static async Task PlayFyshSwoop(ByrdSwoop card, PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
+
+        // Make sure the card exhausts after play.
+        if (!card.Keywords.Contains(CardKeyword.Exhaust))
+        {
+            card.AddKeyword(CardKeyword.Exhaust);
+        }
+
+        // Play the Soul Fysh attack animation even though the card no longer deals damage.
+        var soulFyshPet = card.Owner.PlayerCombatState.GetPet<SoulFyshPipPet>();
+        if (soulFyshPet != null)
+        {
+            await CreatureCmd.TriggerAnim(soulFyshPet, "Attack", 0.45f);
+        }
+
+        await PowerCmd.Apply<WeakPower>(choiceContext, cardPlay.Target, 1m, card.Owner.Creature, card);
+        await PowerCmd.Apply<VulnerablePower>(choiceContext, cardPlay.Target, 1m, card.Owner.Creature, card);
+
+        if (card.CurrentUpgradeLevel > 0)
+        {
+            await PowerCmd.Apply<StrengthPower>(choiceContext, cardPlay.Target, -1m, card.Owner.Creature, card);
+        }
+    }
+}

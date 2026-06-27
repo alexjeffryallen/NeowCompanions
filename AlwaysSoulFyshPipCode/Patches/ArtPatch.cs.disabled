@@ -1,0 +1,70 @@
+using AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Assets;
+using Godot;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Nodes.Relics;
+
+namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Patches;
+
+[HarmonyPatch]
+public static class ArtPatch
+{
+    private const string RelicIconFile = "relic_soul_fysh_pip.png";
+    private const string CardPortraitFile = "card_fysh_swoop.png";
+
+    [HarmonyPatch(typeof(CardModel), nameof(CardModel.Portrait), MethodType.Getter)]
+    [HarmonyPostfix]
+    public static void CardPortraitPostfix(CardModel __instance, ref Texture2D __result)
+    {
+        if (__instance is ByrdSwoop && ModTextureLoader.Load(CardPortraitFile) is { } portrait)
+        {
+            __result = portrait;
+        }
+    }
+
+    [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.Icon), MethodType.Getter)]
+    [HarmonyPostfix]
+    public static void RelicIconPostfix(RelicModel __instance, ref Texture2D __result)
+    {
+        if (__instance is Byrdpip && ModTextureLoader.Load(RelicIconFile) is { } icon)
+        {
+            __result = icon;
+        }
+    }
+
+    [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.IconOutline), MethodType.Getter)]
+    [HarmonyPostfix]
+    public static void RelicIconOutlinePostfix(RelicModel __instance, ref Texture2D __result)
+    {
+        if (__instance is Byrdpip && ModTextureLoader.Load(RelicIconFile) is { } icon)
+        {
+            __result = icon;
+        }
+    }
+
+    [HarmonyPatch(typeof(RelicModel), nameof(RelicModel.BigIcon), MethodType.Getter)]
+    [HarmonyPostfix]
+    public static void RelicBigIconPostfix(RelicModel __instance, ref Texture2D __result)
+    {
+        if (__instance is Byrdpip && ModTextureLoader.Load(RelicIconFile) is { } icon)
+        {
+            __result = icon;
+        }
+    }
+
+    [HarmonyPatch(typeof(NRelic), "Reload")]
+    [HarmonyPostfix]
+    public static void NRelicReloadPostfix(NRelic __instance)
+    {
+        if (__instance.Model is not Byrdpip || ModTextureLoader.Load(RelicIconFile) is not { } icon)
+        {
+            return;
+        }
+
+        __instance.Icon.Texture = icon;
+        __instance.Outline.Texture = icon;
+        MainFile.Logger.Info("Applied Soul Fysh Pip icon to NRelic.");
+    }
+}

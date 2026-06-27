@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Change this if MegaDot is somewhere else on your PC. -->
+    <GodotPath>C:/megadot/MegaDot_v4.5.1-stable_mono_win64.exe</GodotPath>
+  </PropertyGroup>
+</Project>

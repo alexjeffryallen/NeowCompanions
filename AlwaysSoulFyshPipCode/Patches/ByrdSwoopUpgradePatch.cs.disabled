@@ -1,0 +1,21 @@
+using System.Reflection;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Models.Cards;
+
+namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Patches;
+
+[HarmonyPatch]
+public static class ByrdSwoopUpgradePatch
+{
+    public static MethodBase TargetMethod()
+    {
+        return AccessTools.Method(typeof(ByrdSwoop), "OnUpgrade");
+    }
+
+    // Stop the original Byrd Swoop upgrade from adding +4 damage.
+    // Fysh Swoop+ is handled by our play/description patches instead.
+    public static bool Prefix(ByrdSwoop __instance)
+    {
+        return false;
+    }
+}

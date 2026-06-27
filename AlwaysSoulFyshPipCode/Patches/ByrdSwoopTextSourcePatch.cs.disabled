@@ -1,0 +1,119 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Nodes.Cards;
+
+namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Patches;
+
+[HarmonyPatch(typeof(CardModel), nameof(CardModel.Title), MethodType.Getter)]
+public static class ByrdSwoopTitlePatch
+{
+    public static void Postfix(CardModel __instance, ref string __result)
+    {
+        if (__instance is not ByrdSwoop)
+        {
+            return;
+        }
+
+        __result = __instance.CurrentUpgradeLevel > 0
+            ? "Fysh Swoop+"
+            : "Fysh Swoop";
+    }
+}
+
+[HarmonyPatch]
+public static class FyshSwoopCardVisualRenderPatch
+{
+    [ThreadStatic]
+    private static string? _descriptionOverride;
+
+    public static MethodBase TargetMethod()
+    {
+        return AccessTools.Method(
+            typeof(NCard),
+            "UpdateVisuals",
+            new[] { typeof(PileType), typeof(CardPreviewMode) });
+    }
+
+    public static void Prefix(NCard __instance, CardPreviewMode previewMode)
+    {
+        if (__instance.Model is not ByrdSwoop)
+        {
+            _descriptionOverride = null;
+            return;
+        }
+
+        bool upgradedPreview =
+            previewMode == CardPreviewMode.Upgrade ||
+            __instance.Model.CurrentUpgradeLevel > 0;
+
+        _descriptionOverride = upgradedPreview
+            ? "Apply 1 Weak, 1 Vulnerable, and 1 Strength Down."
+            : "Apply 1 Weak and 1 Vulnerable.";
+    }
+
+    public static void Postfix()
+    {
+        _descriptionOverride = null;
+    }
+
+    public static void ReplaceIfByrdSwoopText(ref string __result)
+    {
+        if (_descriptionOverride == null || string.IsNullOrWhiteSpace(__result))
+        {
+            return;
+        }
+
+        if (__result.Contains("Deal 14 damage") ||
+            __result.Contains("Deal 18 damage") ||
+            __result.Contains("Byrd Swoop"))
+        {
+            __result = _descriptionOverride;
+        }
+    }
+}
+
+[HarmonyPatch]
+public static class LocStringAllTextPatch
+{
+    public static IEnumerable<MethodBase> TargetMethods()
+    {
+        return AccessTools.GetDeclaredMethods(typeof(LocString))
+            .Where(method =>
+                method.ReturnType == typeof(string) &&
+                !method.ContainsGenericParameters);
+    }
+
+    public static void Postfix(ref string __result)
+    {
+        FyshSwoopCardVisualRenderPatch.ReplaceIfByrdSwoopText(ref __result);
+    }
+}
+
+[HarmonyPatch]
+public static class CardModelAllStringTextPatch
+{
+    public static IEnumerable<MethodBase> TargetMethods()
+    {
+        return AccessTools.GetDeclaredMethods(typeof(CardModel))
+            .Where(method =>
+                method.ReturnType == typeof(string) &&
+                !method.ContainsGenericParameters);
+    }
+
+    public static void Postfix(CardModel __instance, ref string __result)
+    {
+        if (__instance is not ByrdSwoop)
+        {
+            return;
+        }
+
+        FyshSwoopCardVisualRenderPatch.ReplaceIfByrdSwoopText(ref __result);
+    }
+}

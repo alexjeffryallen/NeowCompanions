@@ -1,0 +1,22 @@
+using System.Threading.Tasks;
+using AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Models;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Models.Relics;
+
+namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Patches;
+
+[HarmonyPatch(typeof(Byrdpip), nameof(Byrdpip.BeforeCombatStart))]
+public static class ByrdpipSummonPatch
+{
+    public static bool Prefix(Byrdpip __instance, ref Task __result)
+    {
+        __result = SummonSoulFyshPip(__instance);
+        return false;
+    }
+
+    private static async Task SummonSoulFyshPip(Byrdpip byrdpip)
+    {
+        await PlayerCmd.AddPet<SoulFyshPipPet>(byrdpip.Owner);
+    }
+}

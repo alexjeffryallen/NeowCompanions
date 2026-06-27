@@ -1,0 +1,43 @@
+<Project Sdk="Godot.NET.Sdk/4.5.1">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <AppOutputBase>$(MSBuildProjectDirectory)\</AppOutputBase>
+    <GodotProjectDir>$(MSBuildProjectDirectory)\</GodotProjectDir>
+    <RootNamespace>AlwaysSoulFyshPip</RootNamespace>
+    <AssemblyName>AlwaysSoulFyshPip</AssemblyName>
+    <NoWarn>$(NoWarn);MSB3270;STS001;STS002;STS004</NoWarn>
+  </PropertyGroup>
+
+  <Import Project="Sts2PathDiscovery.props" />
+
+  <ItemGroup>
+    <Compile Remove=".godot\**\*.cs" />
+    <Compile Remove="_MetadataProbe\**\*.cs" />
+    <Compile Remove="assets\**\*.cs" />
+    <Compile Remove="eng\**\*.cs" />
+    <Compile Remove="workshop\**\*.cs" />
+    <AdditionalFiles Include="eng\**\*.json" Visible="false" />
+    <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="FullPath" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(Sts2DataDir)/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="sts2">
+      <HintPath>$(Sts2DataDir)/sts2.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Alchyr.Sts2.BaseLib" Version="*" />
+    <PackageReference Include="Alchyr.Sts2.ModAnalyzers" Version="*" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

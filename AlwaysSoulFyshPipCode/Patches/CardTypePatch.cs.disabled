@@ -1,0 +1,18 @@
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Cards;
+
+namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Patches;
+
+[HarmonyPatch(typeof(CardModel), nameof(CardModel.Type), MethodType.Getter)]
+public static class CardTypePatch
+{
+    public static void Postfix(CardModel __instance, ref CardType __result)
+    {
+        if (__instance is ByrdSwoop)
+        {
+            __result = CardType.Skill;
+        }
+    }
+}

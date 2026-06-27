@@ -1,0 +1,5 @@
+Start every run with Byrdpip, but with a tiny Soul Fysh companion.
+
+This gives you the Byrd Swoop card immediately instead of needing the Byrdonis Nest event. The pet summon is cosmetic-swapped into a harmless small Soul Fysh.
+
+Requires BaseLib.

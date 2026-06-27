@@ -1,0 +1,32 @@
+using AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Models;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Entities.Creatures;
+
+namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Patches;
+
+[HarmonyPatch(typeof(Creature), nameof(Creature.InvokeDiedEvent))]
+public static class PlayerDeathPatch
+{
+    public static void Postfix(Creature __instance)
+    {
+        TriggerSoulFyshDeath(__instance);
+    }
+
+    public static void TriggerSoulFyshDeath(Creature creature)
+    {
+        if (!creature.IsPlayer || creature.Player?.PlayerCombatState == null)
+        {
+            return;
+        }
+
+        Creature? pet = creature.Player.PlayerCombatState.GetPet<SoulFyshPipPet>();
+        if (pet == null || pet.IsDead)
+        {
+            return;
+        }
+
+        MainFile.Logger.Info("Triggering Soul Fysh Pip death animation.");
+        _ = CreatureCmd.TriggerAnim(pet, "Dead", 1f);
+    }
+}
