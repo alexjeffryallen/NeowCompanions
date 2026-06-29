@@ -8,8 +8,8 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <AppOutputBase>$(MSBuildProjectDirectory)\</AppOutputBase>
     <GodotProjectDir>$(MSBuildProjectDirectory)\</GodotProjectDir>
-    <RootNamespace>AlwaysSoulFyshPip</RootNamespace>
-    <AssemblyName>AlwaysSoulFyshPip</AssemblyName>
+    <RootNamespace>NeowCompanions</RootNamespace>
+    <AssemblyName>NeowCompanions</AssemblyName>
     <NoWarn>$(NoWarn);MSB3270;STS001;STS002;STS004</NoWarn>
   </PropertyGroup>
 

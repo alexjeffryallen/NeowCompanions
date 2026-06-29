@@ -4,7 +4,7 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Models.Events;
 
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode;
+namespace NeowCompanions.NeowCompanionsCode;
 
 [ModInitializer(nameof(Initialize))]
 public partial class MainFile : Node

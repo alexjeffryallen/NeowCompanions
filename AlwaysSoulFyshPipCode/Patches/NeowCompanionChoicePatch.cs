@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using AlwaysSoulFyshPip.AlwaysSoulFyshPipCode;
-using AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Models;
+using NeowCompanions.NeowCompanionsCode;
+using NeowCompanions.NeowCompanionsCode.Models;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Commands;
@@ -16,11 +16,14 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Events;
 using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Nodes.Events;
 
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Patches;
+namespace NeowCompanions.NeowCompanionsCode.Patches;
 
 public static class NeowCompanionChoicePatch
 {
+    internal static IReadOnlyList<string>? ActiveCompanionOptionTexts { get; private set; }
+
     private sealed class CompanionOption
     {
         public CompanionKind Kind { get; }
@@ -41,6 +44,8 @@ public static class NeowCompanionChoicePatch
             CompanionKind.Byrdpip => "BYRDPIP.title",
             CompanionKind.SoulFysh => "SOUL_FYSH.title",
             CompanionKind.Wriggler => "WRIGGLER.title",
+            CompanionKind.CeremonialBeast => "CEREMONIAL_BEAST.title",
+            CompanionKind.KinFollower => "KIN_FOLLOWER.title",
             _ => "CHOOSE_COMPANION.title"
         };
 
@@ -49,6 +54,8 @@ public static class NeowCompanionChoicePatch
             CompanionKind.Byrdpip => "BYRDPIP.description",
             CompanionKind.SoulFysh => "SOUL_FYSH.description",
             CompanionKind.Wriggler => "WRIGGLER.description",
+            CompanionKind.CeremonialBeast => "CEREMONIAL_BEAST.description",
+            CompanionKind.KinFollower => "KIN_FOLLOWER.description",
             _ => "CHOOSE_COMPANION.description"
         };
     }
@@ -57,7 +64,9 @@ public static class NeowCompanionChoicePatch
     [
         new CompanionOption(CompanionKind.Byrdpip, "Byrdpip", typeof(Byrdpip), typeof(ByrdSwoop)),
         new CompanionOption(CompanionKind.SoulFysh, "Soul Fysh Pip", typeof(SoulFyshPipRelic), typeof(FyshSwoop)),
-        new CompanionOption(CompanionKind.Wriggler, "Wriggler", typeof(WrigglerRelic), typeof(WrigglerCard))
+        new CompanionOption(CompanionKind.Wriggler, "Wriggler", typeof(WrigglerRelic), typeof(WrigglerCard)),
+        new CompanionOption(CompanionKind.CeremonialBeast, "Ceremonial Beast", typeof(CeremonialBeastRelic), typeof(CeremonialBeastCard)),
+        new CompanionOption(CompanionKind.KinFollower, "Kin Follower", typeof(KinFollowerRelic), typeof(KinFollowerCard))
     ];
 
     public static void Postfix(Neow __instance, ref IReadOnlyList<EventOption> __result)
@@ -110,10 +119,21 @@ public static class NeowCompanionChoicePatch
             .ToList();
 
         List<EventOption> companionOptions = new();
+        List<string> optionTexts = new();
 
         foreach (CompanionOption companion in offeredCompanions)
         {
             GD.Print("[NeowCompanions] Offering companion: " + companion.DebugName);
+
+            RelicModel displayRelic = GetCompanionRelic(companion).ToMutable();
+
+            if (neow.Owner != null)
+            {
+                displayRelic.Owner = neow.Owner;
+            }
+
+            CardModel previewCard = GetCompanionCard(companion);
+            IHoverTip[] hoverTips = [HoverTipFactory.FromCard(previewCard, upgrade: false)];
 
             EventOption companionOption = new EventOption(
                 neow,
@@ -121,23 +141,20 @@ public static class NeowCompanionChoicePatch
                 {
                     await ChooseCompanion(neow, companion, originalNeowOption);
                 },
-                CompanionLoc(companion.TitleKey),
-                CompanionLoc(companion.DescriptionKey),
+                originalNeowOption.Title,
+                originalNeowOption.Description,
                 "COMPANION." + companion.Kind,
-                Array.Empty<IHoverTip>());
-
-            RelicModel displayRelic = GetCompanionRelic(companion).ToMutable();
-            if (neow.Owner != null)
-            {
-                displayRelic.Owner = neow.Owner;
-            }
+                hoverTips);
 
             companionOptions.Add(companionOption.WithRelic(displayRelic));
+            optionTexts.Add(NeowCompanionText.GetText(companion.TitleKey) + "\n" + NeowCompanionText.GetText(companion.DescriptionKey));
         }
+
+        ActiveCompanionOptionTexts = optionTexts;
 
         InvokeSetEventState(
             neow,
-            CompanionLoc("CHOOSE_COMPANION.description"),
+            originalNeowOption.Description,
             companionOptions);
     }
 
@@ -153,6 +170,7 @@ public static class NeowCompanionChoicePatch
         }
 
         CompanionState.SelectedCompanion = companion.Kind;
+        ActiveCompanionOptionTexts = null;
 
         await RelicCmd.Obtain(GetCompanionRelic(companion).ToMutable(), neow.Owner);
         await AddCompanionCard(companion, neow.Owner);
@@ -179,17 +197,19 @@ public static class NeowCompanionChoicePatch
 
     private static async Task AddCompanionCard(CompanionOption companion, MegaCrit.Sts2.Core.Entities.Players.Player owner)
     {
+        CardModel deckCard = owner.RunState.CreateCard(GetCompanionCard(companion), owner);
+        await CardPileCmd.Add(deckCard, PileType.Deck);
+    }
+
+    private static CardModel GetCompanionCard(CompanionOption companion)
+    {
         MethodInfo method = AccessTools.Method(typeof(ModelDb), nameof(ModelDb.Card), Type.EmptyTypes)
             ?? throw new MissingMethodException("Could not find ModelDb.Card<T>()");
 
         object? canonicalCard = method.MakeGenericMethod(companion.CardType).Invoke(null, []);
-        if (canonicalCard is not CardModel cardModel)
-        {
-            throw new InvalidOperationException($"Companion card type '{companion.CardType.FullName}' did not produce a CardModel.");
-        }
 
-        CardModel deckCard = owner.RunState.CreateCard(cardModel, owner);
-        await CardPileCmd.Add(deckCard, PileType.Deck);
+        return canonicalCard as CardModel
+            ?? throw new InvalidOperationException($"Companion card type '{companion.CardType.FullName}' did not produce a CardModel.");
     }
 
     private static void InvokeSetEventState(Neow neow, LocString description, IReadOnlyList<EventOption> options)
@@ -205,5 +225,24 @@ public static class NeowCompanionChoicePatch
         }
 
         method.Invoke(neow, [description, options]);
+    }
+}
+
+[HarmonyPatch(typeof(NEventOptionButton), "_Ready")]
+public static class NeowCompanionOptionButtonTextPatch
+{
+    public static void Postfix(NEventOptionButton __instance)
+    {
+        IReadOnlyList<string>? optionTexts = NeowCompanionChoicePatch.ActiveCompanionOptionTexts;
+        object? indexValue = AccessTools.Property(typeof(NEventOptionButton), "Index")?.GetValue(__instance);
+        if (optionTexts == null || indexValue is not int index || index < 0 || index >= optionTexts.Count)
+        {
+            return;
+        }
+
+        if (AccessTools.Field(typeof(NEventOptionButton), "_label")?.GetValue(__instance) is GodotObject label)
+        {
+            label.Set("text", optionTexts[index]);
+        }
     }
 }

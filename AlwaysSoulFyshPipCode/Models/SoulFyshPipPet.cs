@@ -10,7 +10,7 @@ using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Models;
+namespace NeowCompanions.NeowCompanionsCode.Models;
 
 public sealed class SoulFyshPipPet : CustomMonsterModel
 {

@@ -1,6 +1,6 @@
 using BaseLib.Config;
 
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Config;
+namespace NeowCompanions.NeowCompanionsCode.Config;
 
 public sealed class AlwaysSoulFyshPipConfig : SimpleModConfig
 {

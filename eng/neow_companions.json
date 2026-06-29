@@ -15,6 +15,10 @@
     "title": "Wriggler",
     "description": "Gain Wriggler as your companion."
   },
+  "CEREMONIAL_BEAST": {
+    "title": "Ceremonial Beast",
+    "description": "Gain Ceremonial Beast as your companion."
+  },
   "ALWAYSSOULFYSHPIP-SOUL_FYSH_PIP_RELIC": {
     "title": "Soul Fysh Pip",
     "description": "At the start of each combat, summon Soul Fysh Pip.",

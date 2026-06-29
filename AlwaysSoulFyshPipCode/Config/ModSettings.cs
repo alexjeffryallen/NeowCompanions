@@ -1,4 +1,4 @@
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Config;
+namespace NeowCompanions.NeowCompanionsCode.Config;
 
 public static class ModSettings
 {

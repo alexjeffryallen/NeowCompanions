@@ -1,7 +1,7 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Localization;
 
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Patches;
+namespace NeowCompanions.NeowCompanionsCode.Patches;
 
 public static class NeowCompanionText
 {
@@ -22,6 +22,12 @@ public static class NeowCompanionText
 
             "WRIGGLER.title" => "Wriggler",
             "WRIGGLER.description" => "Gain Wriggler as your companion.",
+
+            "CEREMONIAL_BEAST.title" => "Ceremonial Beast",
+            "CEREMONIAL_BEAST.description" => "Gain Ceremonial Beast as your companion.",
+
+            "KIN_FOLLOWER.title" => "Kin Follower",
+            "KIN_FOLLOWER.description" => "Gain Kin Follower as your companion.",
 
             _ => key
         };
@@ -54,6 +60,21 @@ public static class NeowCompanionRawTextPatch
         }
 
         __result = NeowCompanionText.GetText(__instance.LocEntryKey);
+        return false;
+    }
+}
+
+[HarmonyPatch(typeof(LocString), nameof(LocString.Exists), [])]
+public static class NeowCompanionInstanceExistsPatch
+{
+    public static bool Prefix(LocString __instance, ref bool __result)
+    {
+        if (__instance.LocTable != NeowCompanionText.Table)
+        {
+            return true;
+        }
+
+        __result = true;
         return false;
     }
 }

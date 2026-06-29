@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Godot;
 
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Assets;
+namespace NeowCompanions.NeowCompanionsCode.Assets;
 
 public static class ModTextureLoader
 {

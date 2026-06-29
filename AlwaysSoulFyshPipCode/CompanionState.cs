@@ -1,4 +1,4 @@
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode;
+namespace NeowCompanions.NeowCompanionsCode;
 
 public enum CompanionKind
 {
@@ -6,7 +6,8 @@ public enum CompanionKind
     Byrdpip,
     SoulFysh,
     Wriggler,
-    CeremonialBeast
+    CeremonialBeast,
+    KinFollower
 }
 
 public static class CompanionState

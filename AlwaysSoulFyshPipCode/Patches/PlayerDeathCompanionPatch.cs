@@ -1,9 +1,9 @@
-using AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Models;
+using NeowCompanions.NeowCompanionsCode.Models;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Patches;
+namespace NeowCompanions.NeowCompanionsCode.Patches;
 
 [HarmonyPatch(typeof(Creature), nameof(Creature.InvokeDiedEvent))]
 public static class PlayerDeathCompanionPatch
@@ -17,6 +17,8 @@ public static class PlayerDeathCompanionPatch
 
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SoulFyshPipPet>(), "Soul Fysh Pip");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<WrigglerPet>(), "Wriggler");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<CeremonialBeastPet>(), "Ceremonial Beast");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<KinFollowerPet>(), "Kin Follower");
     }
 
     private static void TriggerDeathAnimation(Creature? pet, string companionName)

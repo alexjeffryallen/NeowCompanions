@@ -1,12 +1,13 @@
-using AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Assets;
-using AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Models;
+using System;
+using NeowCompanions.NeowCompanionsCode.Assets;
+using NeowCompanions.NeowCompanionsCode.Models;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Nodes.Relics;
 
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Patches;
+namespace NeowCompanions.NeowCompanionsCode.Patches;
 
 [HarmonyPatch]
 public static class ArtPatch
@@ -45,7 +46,17 @@ public static class ArtPatch
     [HarmonyPostfix]
     public static void NRelicReloadPostfix(NRelic __instance)
     {
-        if (GetCompanionIconFile(__instance.Model) is not { } iconFile || ModTextureLoader.Load(iconFile) is not { } icon)
+        RelicModel relic;
+        try
+        {
+            relic = __instance.Model;
+        }
+        catch (InvalidOperationException)
+        {
+            return;
+        }
+
+        if (GetCompanionIconFile(relic) is not { } iconFile || ModTextureLoader.Load(iconFile) is not { } icon)
         {
             return;
         }

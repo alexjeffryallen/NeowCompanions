@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Assets;
+using NeowCompanions.NeowCompanionsCode.Assets;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
 using Godot;
@@ -15,7 +15,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Powers;
 
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Models;
+namespace NeowCompanions.NeowCompanionsCode.Models;
 
 [Pool(typeof(NeowCompanionCardPool))]
 public sealed class FyshSwoop : CustomCardModel
@@ -177,5 +177,76 @@ public sealed class CeremonialBeastCard : CustomCardModel
     protected override void OnUpgrade()
     {
         EnergyCost.UpgradeBy(-1);
+    }
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class KinFollowerCard : CustomCardModel
+{
+    public override CardPoolModel Pool => ModelDb.Card<ByrdSwoop>().Pool;
+
+    public override CardPoolModel VisualCardPool => Pool;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new PowerVar<WeakPower>(2m),
+        new PowerVar<VulnerablePower>(1m)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.FromPower<WeakPower>(),
+        HoverTipFactory.FromPower<VulnerablePower>()
+    ];
+
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+
+    public override Texture2D? CustomPortrait => ModTextureLoader.Load("card_kin_follower.png");
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", "Kin Mark"),
+        ("description", "Apply 2 Weak to ALL enemies.{IfUpgraded:show: Apply 1 Vulnerable to ALL enemies.} Exhaust."),
+        ("flavor", "A quiet gesture, and the room turns against you.")
+    ];
+
+    public KinFollowerCard()
+        : base(1, CardType.Skill, CardRarity.Event, TargetType.AllEnemies)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        if (CombatState == null)
+        {
+            return;
+        }
+
+        var kinFollower = Owner.PlayerCombatState?.GetPet<KinFollowerPet>();
+        if (kinFollower != null && !kinFollower.IsDead)
+        {
+            await CreatureCmd.TriggerAnim(kinFollower, "Attack", 0.25f);
+        }
+
+        await PowerCmd.Apply<WeakPower>(
+            choiceContext,
+            CombatState.HittableEnemies.Where(enemy => enemy.IsAlive),
+            DynamicVars.Weak.BaseValue,
+            Owner.Creature,
+            this);
+
+        if (IsUpgraded)
+        {
+            await PowerCmd.Apply<VulnerablePower>(
+                choiceContext,
+                CombatState.HittableEnemies.Where(enemy => enemy.IsAlive),
+                DynamicVars.Vulnerable.BaseValue,
+                Owner.Creature,
+                this);
+        }
+    }
+
+    protected override void OnUpgrade()
+    {
     }
 }

@@ -7,7 +7,7 @@ using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Monsters;
 
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Models;
+namespace NeowCompanions.NeowCompanionsCode.Models;
 
 public abstract class CompanionRelicModel : RelicModel, ICustomModel, ILocalizationProvider
 {
@@ -78,6 +78,24 @@ public sealed class CeremonialBeastRelic : CompanionRelicModel
     }
 }
 
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class KinFollowerRelic : CompanionRelicModel
+{
+    public override string IconFileName => "relic_kin_follower.png";
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", "Kin Follower"),
+        ("description", "At the start of each combat, summon Kin Follower."),
+        ("flavor", "It follows quietly, waiting for a sign.")
+    ];
+
+    public override Task BeforeCombatStart()
+    {
+        return PlayerCmd.AddPet<KinFollowerPet>(Owner);
+    }
+}
+
 public sealed class WrigglerPet : CustomMonsterModel
 {
     private const float PetScale = 0.90f;
@@ -99,6 +117,42 @@ public sealed class WrigglerPet : CustomMonsterModel
         MegaCrit.Sts2.Core.Bindings.MegaSpine.MegaSprite controller)
     {
         return ModelDb.Monster<Wriggler>().GenerateAnimator(controller);
+    }
+
+    protected override MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterMoveStateMachine GenerateMoveStateMachine()
+    {
+        List<MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterState> states = [];
+        MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MoveState idle =
+            new("NOTHING_MOVE", (IReadOnlyList<MegaCrit.Sts2.Core.Entities.Creatures.Creature> _) => Task.CompletedTask);
+
+        idle.FollowUpState = idle;
+        states.Add(idle);
+
+        return new MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterMoveStateMachine(states, idle);
+    }
+}
+
+public sealed class KinFollowerPet : CustomMonsterModel
+{
+    private const float PetScale = 0.70f;
+
+    public override int MinInitialHp => 9999;
+
+    public override int MaxInitialHp => 9999;
+
+    public override bool IsHealthBarVisible => false;
+
+    public override MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals? CreateCustomVisuals()
+    {
+        MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals visuals = ModelDb.Monster<KinFollower>().CreateVisuals();
+        visuals.Scale = new Godot.Vector2(-PetScale, PetScale);
+        return visuals;
+    }
+
+    public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(
+        MegaCrit.Sts2.Core.Bindings.MegaSpine.MegaSprite controller)
+    {
+        return ModelDb.Monster<KinFollower>().GenerateAnimator(controller);
     }
 
     protected override MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterMoveStateMachine GenerateMoveStateMachine()

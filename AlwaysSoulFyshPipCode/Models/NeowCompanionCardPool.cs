@@ -2,15 +2,17 @@ using BaseLib.Abstracts;
 using Godot;
 using MegaCrit.Sts2.Core.Models;
 
-namespace AlwaysSoulFyshPip.AlwaysSoulFyshPipCode.Models;
+namespace NeowCompanions.NeowCompanionsCode.Models;
 
 public sealed class NeowCompanionCardPool : CustomCardPoolModel
 {
     public override string Title => "NeowCompanions";
 
-    public override bool IsShared => false;
+    public override bool IsShared => true;
 
     public override bool IsColorless => true;
+
+    public override bool SeenByDefault => true;
 
     public override Color DeckEntryCardColor => new("D0B46A");
 
@@ -20,7 +22,8 @@ public sealed class NeowCompanionCardPool : CustomCardPoolModel
         [
             ModelDb.Card<FyshSwoop>(),
             ModelDb.Card<WrigglerCard>(),
-            ModelDb.Card<CeremonialBeastCard>()
+            ModelDb.Card<CeremonialBeastCard>(),
+            ModelDb.Card<KinFollowerCard>()
         ];
     }
 }
