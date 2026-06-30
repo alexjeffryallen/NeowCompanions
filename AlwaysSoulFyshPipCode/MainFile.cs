@@ -1,6 +1,8 @@
 using System.Reflection;
+using BaseLib.Config;
 using Godot;
 using HarmonyLib;
+using NeowCompanions.NeowCompanionsCode.Config;
 using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Models.Events;
 
@@ -51,5 +53,9 @@ public partial class MainFile : Node
 
         Logger.Info("[NeowCompanions] PatchAll complete.");
         GD.Print("[NeowCompanions] PatchAll complete.");
+
+        ModConfigRegistry.Register(ModId, new NeowCompanionsConfig());
+        Logger.Info("[NeowCompanions] Mod config registered.");
+        GD.Print("[NeowCompanions] Mod config registered.");
     }
 }

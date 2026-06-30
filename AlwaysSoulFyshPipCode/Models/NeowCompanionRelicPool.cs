@@ -17,7 +17,19 @@ public sealed class NeowCompanionRelicPool : CustomRelicPoolModel
             ModelDb.Relic<SoulFyshPipRelic>(),
             ModelDb.Relic<WrigglerRelic>(),
             ModelDb.Relic<CeremonialBeastRelic>(),
-            ModelDb.Relic<KinFollowerRelic>()
+            ModelDb.Relic<KinFollowerRelic>(),
+            ModelDb.Relic<EyeWithTeethRelic>(),
+            ModelDb.Relic<GremlinMercRelic>(),
+            ModelDb.Relic<ThievingHopperRelic>(),
+            ModelDb.Relic<AeonglassRelic>(),
+            ModelDb.Relic<LagavulinMatriarchRelic>(),
+            ModelDb.Relic<TheKinRelic>(),
+            ModelDb.Relic<WaterfallGiantRelic>(),
+            ModelDb.Relic<VantomRelic>(),
+            ModelDb.Relic<KnowledgeDemonRelic>(),
+            ModelDb.Relic<TheInsatiableRelic>(),
+            ModelDb.Relic<QueenRelic>(),
+            ModelDb.Relic<TestSubjectRelic>()
         ];
     }
 }

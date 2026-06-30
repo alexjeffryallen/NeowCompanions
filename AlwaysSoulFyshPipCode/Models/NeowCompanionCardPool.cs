@@ -23,7 +23,19 @@ public sealed class NeowCompanionCardPool : CustomCardPoolModel
             ModelDb.Card<FyshSwoop>(),
             ModelDb.Card<WrigglerCard>(),
             ModelDb.Card<CeremonialBeastCard>(),
-            ModelDb.Card<KinFollowerCard>()
+            ModelDb.Card<KinFollowerCard>(),
+            ModelDb.Card<EyeWithTeethCard>(),
+            ModelDb.Card<GremlinMercCard>(),
+            ModelDb.Card<ThievingHopperCard>(),
+            ModelDb.Card<AeonglassCard>(),
+            ModelDb.Card<LagavulinMatriarchCard>(),
+            ModelDb.Card<TheKinCard>(),
+            ModelDb.Card<WaterfallGiantCard>(),
+            ModelDb.Card<VantomCard>(),
+            ModelDb.Card<KnowledgeDemonCard>(),
+            ModelDb.Card<TheInsatiableCard>(),
+            ModelDb.Card<QueenCard>(),
+            ModelDb.Card<TestSubjectCard>()
         ];
     }
 }

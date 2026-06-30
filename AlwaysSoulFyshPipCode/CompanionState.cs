@@ -7,7 +7,19 @@ public enum CompanionKind
     SoulFysh,
     Wriggler,
     CeremonialBeast,
-    KinFollower
+    KinFollower,
+    EyeWithTeeth,
+    GremlinMerc,
+    ThievingHopper,
+    Aeonglass,
+    LagavulinMatriarch,
+    TheKin,
+    WaterfallGiant,
+    Vantom,
+    KnowledgeDemon,
+    TheInsatiable,
+    Queen,
+    TestSubject
 }
 
 public static class CompanionState
