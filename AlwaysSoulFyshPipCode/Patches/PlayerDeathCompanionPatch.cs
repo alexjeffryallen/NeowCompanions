@@ -18,7 +18,7 @@ public static class PlayerDeathCompanionPatch
         }
 
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SoulFyshPipPet>(), "Soul Fysh Pip");
-        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<WrigglerPet>(), "Wriggler");
+        TriggerWrigglerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<WrigglerPet>());
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<CeremonialBeastPet>(), "Ceremonial Beast");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<KinFollowerPet>(), "Kin Follower");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<EyeWithTeethPet>(), "Eye With Teeth");
@@ -44,6 +44,33 @@ public static class PlayerDeathCompanionPatch
 
         MainFile.Logger.Info($"Triggering {companionName} death animation.");
         _ = CreatureCmd.TriggerAnim(pet, "Dead", 1f);
+    }
+
+    private static void TriggerWrigglerDeathAnimation(Creature? wriggler)
+    {
+        if (wriggler == null || wriggler.IsDead)
+        {
+            return;
+        }
+
+        MainFile.Logger.Info("Triggering Wriggler death animation.");
+        _ = TriggerFirstAvailableWrigglerDeathAnimation(wriggler);
+    }
+
+    private static async Task TriggerFirstAvailableWrigglerDeathAnimation(Creature wriggler)
+    {
+        foreach (string animationName in new[] { "Dead", "Death", "Die" })
+        {
+            try
+            {
+                await CreatureCmd.TriggerAnim(wriggler, animationName, 0.35f);
+                return;
+            }
+            catch
+            {
+                MainFile.Logger.Info($"Wriggler did not have death animation '{animationName}'.");
+            }
+        }
     }
 
     private static void TriggerGremlinMercDeathAnimation(Player owner)

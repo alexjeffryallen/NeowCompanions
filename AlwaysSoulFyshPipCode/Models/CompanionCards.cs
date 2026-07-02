@@ -8,8 +8,11 @@ using BaseLib.Utils;
 using Godot;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.HoverTips;
+using MegaCrit.Sts2.Core.Hooks;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
@@ -41,7 +44,7 @@ public sealed class FyshSwoop : CustomCardModel
 
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
 
-    public override Texture2D? CustomPortrait => ModTextureLoader.Load("card_soul_fysh_pip.png");
+    public override Texture2D? CustomPortrait => ModTextureLoader.Load("card_fysh_swoop.png");
 
     public override List<(string, string)> Localization =>
     [
@@ -77,7 +80,6 @@ public sealed class FyshSwoop : CustomCardModel
 
     protected override void OnUpgrade()
     {
-        RemoveKeyword(CardKeyword.Exhaust);
     }
 }
 
@@ -106,7 +108,7 @@ public sealed class WrigglerCard : CustomCardModel
     public override List<(string, string)> Localization =>
     [
         ("title", "Wriggler"),
-        ("description", "Apply 3 Poison to ALL enemies.{IfUpgraded:show:| Exhaust.}"),
+        ("description", "Apply 3 Poison to ALL enemies."),
         ("flavor", "It writhes with a terrible little purpose.")
     ];
 
@@ -154,10 +156,12 @@ public sealed class CeremonialBeastCard : CustomCardModel
 
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
 
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SingleEnemyAwareDamageVar(20m, DamageProps.card)];
+
     public override List<(string, string)> Localization =>
     [
         ("title", "Ceremonial Toll"),
-        ("description", "Deal 20 damage to ALL enemies. Exhaust."),
+        ("description", "Deal {Damage:diff} damage to ALL enemies."),
         ("flavor", "The bell rings once. The room answers.")
     ];
 
@@ -176,15 +180,14 @@ public sealed class CeremonialBeastCard : CustomCardModel
         var beast = Owner.PlayerCombatState?.GetPet<CeremonialBeastPet>();
         if (beast != null && !beast.IsDead)
         {
-            SfxCmd.Play("event:/sfx/enemy/enemy_attacks/ceremonial_beast/ceremonial_beast_shrill");
-            await CreatureCmd.TriggerAnim(beast, "Charge", 0.6f);
+            SfxCmd.Play("event:/sfx/enemy/enemy_attacks/ceremonial_beast/ceremonial_beast_plow");
+            await CompanionAnimation.TryTriggerAnimation(beast, "Plow", "Charge", "Attack");
         }
 
         await CreatureCmd.Damage(
             choiceContext,
             CombatState.HittableEnemies.Where(enemy => enemy.IsAlive),
-            20m,
-            DamageProps.card,
+            DynamicVars.Damage,
             Owner.Creature,
             this);
     }
@@ -242,7 +245,8 @@ public sealed class KinFollowerCard : CustomCardModel
         if (kinFollower != null && !kinFollower.IsDead)
         {
             MainFile.Logger.Info("Triggering Kin Follower attack animation from Kin Mark.");
-            await CreatureCmd.TriggerAnim(kinFollower, "Attack", 0.6f);
+            SfxCmd.Play("event:/sfx/enemy/enemy_attacks/the_kin_minion/the_kin_minion_quick_slash");
+            await CompanionAnimation.TryTriggerAnimation(kinFollower, "SlashTrigger", "BoomerangTrigger", "Attack");
         }
 
         await PowerCmd.Apply<WeakPower>(
@@ -276,7 +280,11 @@ public sealed class EyeWithTeethCard : CustomCardModel
 
     public override CardPoolModel VisualCardPool => Pool;
 
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new IfUpgradedVar("IfUpgraded", 0m)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new BlockVar(6m, ValueProp.Move),
+        new IfUpgradedVar("IfUpgraded", 0m)
+    ];
 
     protected override IEnumerable<IHoverTip> ExtraHoverTips =>
     [
@@ -284,12 +292,14 @@ public sealed class EyeWithTeethCard : CustomCardModel
 
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
 
+    public override bool GainsBlock => true;
+
     public override Texture2D? CustomPortrait => ModTextureLoader.Load("card_eye_with_teeth.png");
 
     public override List<(string, string)> Localization =>
     [
         ("title", "Toothy Stare"),
-        ("description", "Gain 6 Block.{IfUpgraded:show:| Exhaust.}"),
+        ("description", "Gain {Block:diff} Block."),
         ("flavor", "It sees the threat, then smiles.")
     ];
 
@@ -307,12 +317,27 @@ public sealed class EyeWithTeethCard : CustomCardModel
             await CreatureCmd.TriggerAnim(eyeWithTeeth, "Attack", 0.5f);
         }
 
-        await CreatureCmd.GainBlock(Owner.Creature, 6m, BlockProps.card, cardPlay, false);
+        await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, cardPlay, false);
     }
 
     protected override void OnUpgrade()
     {
         RemoveKeyword(CardKeyword.Exhaust);
+    }
+
+    protected override void AddExtraArgsToDescription(LocString description)
+    {
+        if (CombatState != null && Owner?.Creature != null)
+        {
+            DynamicVars.Block.PreviewValue = Hook.ModifyBlock(
+                CombatState,
+                Owner.Creature,
+                DynamicVars.Block.BaseValue,
+                DynamicVars.Block.Props,
+                this,
+                null,
+                out _);
+        }
     }
 }
 
@@ -323,7 +348,7 @@ public sealed class GremlinMercCard : CustomCardModel
 
     public override CardPoolModel VisualCardPool => Pool;
 
-    protected override IEnumerable<DynamicVar> CanonicalVars => [];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(10m, DamageProps.card)];
 
     protected override IEnumerable<IHoverTip> ExtraHoverTips =>
     [
@@ -336,7 +361,7 @@ public sealed class GremlinMercCard : CustomCardModel
     public override List<(string, string)> Localization =>
     [
         ("title", "Mercenary Feint"),
-        ("description", "Deal 10 damage. If this kills an enemy, gain 10 Gold. Exhaust."),
+        ("description", "Deal {Damage:diff} damage. If this kills an enemy, gain 10 Gold."),
         ("flavor", "Cheap work, but enthusiastic.")
     ];
 
@@ -356,7 +381,7 @@ public sealed class GremlinMercCard : CustomCardModel
             await CreatureCmd.TriggerAnim(gremlinMerc, "Attack", 0.5f);
         }
 
-        await CreatureCmd.Damage(choiceContext, cardPlay.Target, 10m, DamageProps.card, Owner.Creature, this);
+        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this);
         if (!cardPlay.Target.IsAlive)
         {
             await PlayerCmd.GainGold(10m, Owner, false);
@@ -393,7 +418,7 @@ public sealed class ThievingHopperCard : CustomCardModel
     public override List<(string, string)> Localization =>
     [
         ("title", "Hopper Jab"),
-        ("description", "Deal {IfUpgraded:show:10|6} damage. If this kills an enemy, add a random card to your deck permanently. Exhaust."),
+        ("description", "Deal {Damage:diff} damage. If this kills an enemy, add a random card to your deck permanently."),
         ("flavor", "It darts in before anyone can check their pockets.")
     ];
 
@@ -413,7 +438,7 @@ public sealed class ThievingHopperCard : CustomCardModel
             await CreatureCmd.TriggerAnim(thievingHopper, "Attack", 0.5f);
         }
 
-        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage.BaseValue, DamageProps.card, Owner.Creature, this);
+        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this);
         if (!cardPlay.Target.IsAlive)
         {
             CardModel randomCard = ModelDb.AllCards
@@ -423,6 +448,7 @@ public sealed class ThievingHopperCard : CustomCardModel
                 .ToMutable();
 
             CardModel deckCard = Owner.RunState.CreateCard(randomCard, Owner);
+            MainFile.Logger.Info($"Hopper Jab added {deckCard.GetType().Name} to the permanent deck.");
             await CardPileCmd.Add(deckCard, PileType.Deck);
         }
     }
@@ -430,5 +456,41 @@ public sealed class ThievingHopperCard : CustomCardModel
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(4m);
+    }
+}
+
+public sealed class SingleEnemyAwareDamageVar : DamageVar
+{
+    public SingleEnemyAwareDamageVar(decimal damage, MegaCrit.Sts2.Core.ValueProps.ValueProp props)
+        : base(damage, props)
+    {
+    }
+
+    public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks)
+    {
+        Creature? previewTarget = target;
+        if (previewTarget == null && card.TargetType == TargetType.AllEnemies && card.CombatState != null)
+        {
+            List<Creature> livingEnemies = card.CombatState.HittableEnemies.Where(enemy => enemy.IsAlive).ToList();
+            if (livingEnemies.Count == 1)
+            {
+                previewTarget = livingEnemies[0];
+            }
+        }
+
+        base.UpdateCardPreview(card, previewMode, previewTarget, runGlobalHooks);
+    }
+}
+
+public sealed class SelfAwareBlockVar : BlockVar
+{
+    public SelfAwareBlockVar(decimal block, MegaCrit.Sts2.Core.ValueProps.ValueProp props)
+        : base(block, props)
+    {
+    }
+
+    public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks)
+    {
+        base.UpdateCardPreview(card, previewMode, target ?? card.Owner?.Creature, runGlobalHooks);
     }
 }

@@ -188,7 +188,7 @@ public sealed class AeonglassCard : BossCompanionCard<AeonglassPet>
     public override List<(string, string)> Localization =>
     [
         ("title", CardTitle),
-        ("description", "Deal {IfUpgraded:show:12|10} damage. If left in your hand, take 2 damage."),
+        ("description", "Deal {Damage:diff} damage. If left in your hand, take 2 damage."),
         ("flavor", "A mirrored second waits behind the first.")
     ];
 
@@ -202,7 +202,7 @@ public sealed class AeonglassCard : BossCompanionCard<AeonglassPet>
         ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
 
         await TriggerPetAnimation<AeonglassPet>("Attack", 0.5f);
-        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage.BaseValue, DamageProps.card, Owner.Creature, this);
+        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this);
     }
 
     protected override Task OnTurnEndInHand(PlayerChoiceContext choiceContext)
@@ -226,6 +226,17 @@ public sealed class LagavulinMatriarchRelic : BossCompanionRelic<LagavulinMatria
 {
     protected override string CompanionName => "Lagavulin Matriarch";
     protected override string RelicIconFileName => "relic_lagavulin_matriarch.png";
+
+    public override async Task BeforeCombatStart()
+    {
+        await base.BeforeCombatStart();
+
+        Creature? matriarch = Owner.PlayerCombatState?.GetPet<LagavulinMatriarchPet>();
+        if (matriarch != null && !matriarch.IsDead)
+        {
+            await CompanionAnimation.TryTriggerAnimation(matriarch, "Sleep", "Asleep", "IdleSleep");
+        }
+    }
 }
 
 [Pool(typeof(NeowCompanionCardPool))]
@@ -257,14 +268,19 @@ public sealed class LagavulinMatriarchCard : BossCompanionCard<LagavulinMatriarc
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
-        await TriggerPetAnimation<LagavulinMatriarchPet>("Attack", 0.5f);
+        Creature? matriarch = Owner.PlayerCombatState?.GetPet<LagavulinMatriarchPet>();
+        if (matriarch != null && !matriarch.IsDead)
+        {
+            await CompanionAnimation.TryTriggerAnimation(matriarch, "WakeUp", "Wake", "Awake", "Attack");
+        }
+
         await PowerCmd.Apply<StrengthPower>(choiceContext, Owner.Creature, DynamicVars.Strength.BaseValue, Owner.Creature, this);
         await PowerCmd.Apply<DexterityPower>(choiceContext, Owner.Creature, DynamicVars.Dexterity.BaseValue, Owner.Creature, this);
         await PowerCmd.Apply<LagavulinMatriarchDrainPower>(choiceContext, Owner.Creature, 1m, Owner.Creature, this);
     }
 
     public LagavulinMatriarchCard()
-        : base(3, CardType.Power, TargetType.Self)
+        : base(2, CardType.Power, TargetType.Self)
     {
     }
 
@@ -321,7 +337,12 @@ public sealed class TheKinCard : BossCompanionCard<TheKinPet>
             return;
         }
 
-        await TriggerPetAnimation<TheKinPet>("Attack", 0.5f);
+        Creature? theKin = Owner.PlayerCombatState?.GetPet<TheKinPet>();
+        if (theKin != null && !theKin.IsDead)
+        {
+            await CompanionAnimation.TryTriggerAnimation(theKin, "ThrowBomb", "Bomb", "Attack");
+        }
+
         IEnumerable<Creature> enemies = CombatState.HittableEnemies.Where(enemy => enemy.IsAlive);
         await PowerCmd.Apply<VulnerablePower>(choiceContext, enemies, 1m, Owner.Creature, this);
         if (IsUpgraded)
@@ -357,14 +378,13 @@ public sealed class WaterfallGiantCard : BossCompanionCard<WaterfallGiantPet>
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(20m, DamageProps.card),
         new IfUpgradedVar("IfUpgraded", 0m)
     ];
 
     public override List<(string, string)> Localization =>
     [
         ("title", CardTitle),
-        ("description", "At the end of your next turn, {IfUpgraded:show:deal 20 damage to ALL enemies|deal 20 damage to a random enemy}. Exhaust."),
+        ("description", "In 2 turns, {IfUpgraded:show:deal 20 damage to ALL enemies|deal 20 damage to a random enemy}."),
         ("flavor", "The first sound is only water. The second is stone arriving.")
     ];
 
@@ -375,17 +395,16 @@ public sealed class WaterfallGiantCard : BossCompanionCard<WaterfallGiantPet>
         await TriggerPetAnimation<WaterfallGiantPet>("Attack", 0.5f);
         if (IsUpgraded)
         {
-            await PowerCmd.Apply<WaterfallGiantDelayedPower>(choiceContext, Owner.Creature, 1m, Owner.Creature, this);
+            await PowerCmd.Apply<WaterfallGiantDelayedPower>(choiceContext, Owner.Creature, 2m, Owner.Creature, this);
         }
         else
         {
-            await PowerCmd.Apply<WaterfallGiantRandomDelayedPower>(choiceContext, Owner.Creature, 1m, Owner.Creature, this);
+            await PowerCmd.Apply<WaterfallGiantRandomDelayedPower>(choiceContext, Owner.Creature, 2m, Owner.Creature, this);
         }
     }
 
     protected override void OnUpgrade()
     {
-        DynamicVars.Damage.UpgradeValueBy(0m);
     }
 }
 
@@ -415,7 +434,7 @@ public sealed class VantomCard : BossCompanionCard<VantomPet>
     public override List<(string, string)> Localization =>
     [
         ("title", CardTitle),
-        ("description", "Gain 1 Slippery. Exhaust."),
+        ("description", "Gain 1 Slippery."),
         ("flavor", "It leaves a shape where certainty used to be.")
     ];
 
@@ -434,7 +453,7 @@ public sealed class VantomCard : BossCompanionCard<VantomPet>
 
     protected override void OnUpgrade()
     {
-        EnergyCost.UpgradeBy(-1);
+        AddKeyword(CardKeyword.Retain);
     }
 }
 
@@ -459,10 +478,10 @@ public sealed class KnowledgeDemonCard : BossCompanionCard<KnowledgeDemonPet>
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new PowerVar<DrawCardsNextTurnPower>(1m)
+        new PowerVar<KnowledgeDemonDrawPower>(1m)
     ];
 
-    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<DrawCardsNextTurnPower>()];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<KnowledgeDemonDrawPower>()];
 
     public override List<(string, string)> Localization =>
     [
@@ -478,9 +497,14 @@ public sealed class KnowledgeDemonCard : BossCompanionCard<KnowledgeDemonPet>
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
-        await TriggerPetAnimation<KnowledgeDemonPet>("Attack", 0.5f);
+        Creature? knowledgeDemon = Owner.PlayerCombatState?.GetPet<KnowledgeDemonPet>();
+        if (knowledgeDemon != null && !knowledgeDemon.IsDead)
+        {
+            await CompanionAnimation.TryTriggerAnimation(knowledgeDemon, "Buff", "Cast", "Attack");
+        }
+
         await CreatureCmd.Damage(choiceContext, Owner.Creature, 6m, DamageProps.cardHpLoss, Owner.Creature, this);
-        await PowerCmd.Apply<DrawCardsNextTurnPower>(choiceContext, Owner.Creature, 1m, Owner.Creature, this);
+        await PowerCmd.Apply<KnowledgeDemonDrawPower>(choiceContext, Owner.Creature, 1m, Owner.Creature, this);
     }
 
     protected override void OnUpgrade()
@@ -492,6 +516,24 @@ public sealed class KnowledgeDemonCard : BossCompanionCard<KnowledgeDemonPet>
 public sealed class KnowledgeDemonPet : BossCompanionPet<KnowledgeDemon>
 {
     protected override float PetScale => 0.27f;
+}
+
+public sealed class KnowledgeDemonDrawPower : CustomPowerModel
+{
+    public override PowerType Type => PowerType.Buff;
+
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", "Forbidden Lesson"),
+        ("description", "Draw {Amount} additional card at the start of each turn.")
+    ];
+
+    public override decimal ModifyHandDraw(MegaCrit.Sts2.Core.Entities.Players.Player player, decimal count)
+    {
+        return player.Creature == Owner ? count + Amount : count;
+    }
 }
 
 [Pool(typeof(NeowCompanionRelicPool))]
@@ -511,7 +553,7 @@ public sealed class TheInsatiableCard : BossCompanionCard<TheInsatiablePet>
     public override List<(string, string)> Localization =>
     [
         ("title", CardTitle),
-        ("description", "Kill an enemy with less than 50 HP, ignoring Block. Exhaust."),
+        ("description", "Kill an enemy with less than 50 HP, ignoring Block."),
         ("flavor", "There is no wound. There is only absence.")
     ];
 
@@ -574,7 +616,7 @@ public sealed class QueenCard : BossCompanionCard<QueenPet>
     public override List<(string, string)> Localization =>
     [
         ("title", CardTitle),
-        ("description", "Apply 99 Weak and 99 Vulnerable.{IfUpgraded:show: Retain.|}"),
+        ("description", "Apply 99 Weak and 99 Vulnerable."),
         ("flavor", "A crown is just a problem with witnesses.")
     ];
 
@@ -633,7 +675,7 @@ public sealed class TestSubjectCard : BossCompanionCard<TestSubjectPet>
     public override List<(string, string)> Localization =>
     [
         ("title", CardTitle),
-        ("description", "Heal HP equal to the damage you took last turn. Exhaust."),
+        ("description", "Heal HP equal to the damage you took last turn."),
         ("flavor", "The notes say recovery. The subject says otherwise.")
     ];
 
@@ -674,7 +716,7 @@ public sealed class WaterfallGiantDelayedPower : CustomPowerModel
     public override List<(string, string)> Localization =>
     [
         ("title", "Giant Undertow"),
-        ("description", "At the end of your next turn, deal 20 damage to ALL enemies.")
+        ("description", "In {Amount} turns, deal 20 damage to ALL enemies.")
     ];
 
     public override async Task AfterSideTurnEnd(
@@ -687,8 +729,15 @@ public sealed class WaterfallGiantDelayedPower : CustomPowerModel
             return;
         }
 
+        if (Amount > 1)
+        {
+            await PowerCmd.ModifyAmount(choiceContext, this, -1m, Owner, null);
+            return;
+        }
+
         IEnumerable<Creature> targets = CombatState.HittableEnemies.Where(enemy => enemy.IsAlive);
-        await CreatureCmd.Damage(choiceContext, targets, 20m, DamageProps.card, Owner);
+        await CompanionAnimation.TriggerWaterfallGiantExplosion(Owner);
+        await CreatureCmd.Damage(choiceContext, targets, 20m, DamageProps.cardUnpowered, Owner);
         await PowerCmd.Remove(this);
     }
 }
@@ -702,7 +751,7 @@ public sealed class WaterfallGiantRandomDelayedPower : CustomPowerModel
     public override List<(string, string)> Localization =>
     [
         ("title", "Giant Undertow"),
-        ("description", "At the end of your next turn, deal 20 damage to a random enemy.")
+        ("description", "In {Amount} turns, deal 20 damage to a random enemy.")
     ];
 
     public override async Task AfterSideTurnEnd(
@@ -715,10 +764,17 @@ public sealed class WaterfallGiantRandomDelayedPower : CustomPowerModel
             return;
         }
 
+        if (Amount > 1)
+        {
+            await PowerCmd.ModifyAmount(choiceContext, this, -1m, Owner, null);
+            return;
+        }
+
         Creature? target = CombatState.HittableEnemies.Where(enemy => enemy.IsAlive).OrderBy(_ => Guid.NewGuid()).FirstOrDefault();
         if (target != null)
         {
-            await CreatureCmd.Damage(choiceContext, target, 20m, DamageProps.card, Owner);
+            await CompanionAnimation.TriggerWaterfallGiantExplosion(Owner);
+            await CreatureCmd.Damage(choiceContext, target, 20m, DamageProps.cardUnpowered, Owner);
         }
 
         await PowerCmd.Remove(this);
@@ -790,12 +846,40 @@ public sealed class TestSubjectLastTurnDamagePower : CustomPowerModel
         MegaCrit.Sts2.Core.Combat.CombatSide side,
         IEnumerable<Creature> creatures)
     {
-        if (creatures.Contains(Owner))
+        if (!creatures.Contains(Owner) && currentTurnDamage > 0m)
         {
             LastTurnDamage = currentTurnDamage;
             currentTurnDamage = 0m;
         }
 
         return Task.CompletedTask;
+    }
+}
+
+internal static class CompanionAnimation
+{
+    public static async Task TryTriggerAnimation(Creature creature, params string[] animationNames)
+    {
+        foreach (string animationName in animationNames)
+        {
+            try
+            {
+                await CreatureCmd.TriggerAnim(creature, animationName, 0.5f);
+                return;
+            }
+            catch
+            {
+                MainFile.Logger.Info($"Animation '{animationName}' did not play.");
+            }
+        }
+    }
+
+    public static async Task TriggerWaterfallGiantExplosion(Creature owner)
+    {
+        Creature? waterfallGiant = owner.Player?.PlayerCombatState?.GetPet<WaterfallGiantPet>();
+        if (waterfallGiant != null && !waterfallGiant.IsDead)
+        {
+            await TryTriggerAnimation(waterfallGiant, "Explode", "Explosion", "Attack");
+        }
     }
 }
