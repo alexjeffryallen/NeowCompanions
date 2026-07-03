@@ -444,8 +444,7 @@ public sealed class ThievingHopperCard : CustomCardModel
             CardModel randomCard = ModelDb.AllCards
                 .Where(card => card.CanBeGeneratedInCombat && card.ShouldShowInCardLibrary)
                 .OrderBy(_ => Guid.NewGuid())
-                .First()
-                .ToMutable();
+                .First();
 
             CardModel deckCard = Owner.RunState.CreateCard(randomCard, Owner);
             MainFile.Logger.Info($"Hopper Jab added {deckCard.GetType().Name} to the permanent deck.");

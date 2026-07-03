@@ -42,3 +42,12 @@ node_modules/
 .DS_Store
 Thumbs.db
 [Dd]esktop.ini
+
+# Local tooling and generated scratch assets
+tmp/
+*.backup_*
+assets/_original_card_backups/
+assets/card_art_v2/
+assets/generated_previews/
+workshop/NeowCompanionsTestingWorkspace/
+workshop/NeowCompanionsWorkspace/content/assets/

@@ -66,6 +66,15 @@ public static class NeowCompanionText
             "TEST_SUBJECT.title" => "Test Subject",
             "TEST_SUBJECT.description" => "Gain Test Subject as your companion.",
 
+            "SEAPUNK.title" => "Seapunk",
+            "SEAPUNK.description" => "Gain Seapunk as your companion.",
+
+            "SHRINKER_BEETLE.title" => "Shrinker Beetle",
+            "SHRINKER_BEETLE.description" => "Gain Shrinker Beetle as your companion.",
+
+            "OPEROSIS.title" => "Operosis",
+            "OPEROSIS.description" => "Gain Operosis as your companion.",
+
             _ => key
         };
     }
@@ -79,6 +88,14 @@ public static class NeowCompanionText
             text = normalizedKey.EndsWith(".HOVER.DESC")
                 ? "Show every companion in the pool instead of choosing three at random."
                 : "Offer all companions";
+            return true;
+        }
+
+        if (normalizedKey.Contains("RANDOM_COMPANION_NO_CHOICES"))
+        {
+            text = normalizedKey.EndsWith(".HOVER.DESC")
+                ? "When enabled, choosing a Neow option grants one random companion immediately instead of showing companion choices."
+                : "Random companion, no choices";
             return true;
         }
 

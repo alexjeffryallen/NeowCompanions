@@ -18,6 +18,7 @@ using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.ValueProps;
 
 namespace NeowCompanions.NeowCompanionsCode.Models;
@@ -568,11 +569,19 @@ public sealed class TheInsatiableCard : BossCompanionCard<TheInsatiablePet>
     {
         ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
 
-        await TriggerPetAnimation<TheInsatiablePet>("Attack", 0.5f);
-        if (cardPlay.Target.CurrentHp < 50m)
+        if (cardPlay.Target.CurrentHp >= 50m)
         {
-            await CreatureCmd.SetCurrentHp(cardPlay.Target, 0m);
+            return;
         }
+
+        Creature? insatiable = Owner.PlayerCombatState?.GetPet<TheInsatiablePet>();
+        if (insatiable != null && !insatiable.IsDead)
+        {
+            await CompanionAnimation.TriggerInsatiableDevour(insatiable, cardPlay.Target);
+            return;
+        }
+
+        await CreatureCmd.Kill(cardPlay.Target, true);
     }
 
     protected override void OnUpgrade()
@@ -705,6 +714,226 @@ public sealed class TestSubjectCard : BossCompanionCard<TestSubjectPet>
 public sealed class TestSubjectPet : BossCompanionPet<TestSubject>
 {
     protected override float PetScale => 0.25f;
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class SeapunkRelic : BossCompanionRelic<SeapunkPet>
+{
+    protected override string CompanionName => "Seapunk";
+    protected override string RelicIconFileName => "relic_seapunk.png";
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class SeapunkCard : BossCompanionCard<SeapunkPet>
+{
+    private const int HitCount = 4;
+
+    protected override string CompanionName => "Seapunk";
+    protected override string CardTitle => "Spinning Kick";
+    protected override string CardArtFileName => "card_seapunk.png";
+
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(2m, DamageProps.card)];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+    ];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Deal {Damage:diff} damage 4 times."),
+        ("flavor", "Four kicks, one rhythm, no apologies.")
+    ];
+
+    public SeapunkCard()
+        : base(1, CardType.Attack, TargetType.AnyEnemy)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
+
+        Creature? seapunk = Owner.PlayerCombatState?.GetPet<SeapunkPet>();
+        if (seapunk != null && !seapunk.IsDead)
+        {
+            MainFile.Logger.Info("Triggering Seapunk multi-attack animation from Spinning Kick.");
+            SfxCmd.Play("event:/sfx/enemy/enemy_attacks/seapunk/seapunk_kick_multi");
+            await CreatureCmd.TriggerAnim(seapunk, "MultiAttack", 0.15f);
+        }
+
+        for (int i = 0; i < HitCount && cardPlay.Target.IsAlive; i++)
+        {
+            await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this);
+        }
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Damage.UpgradeValueBy(1m);
+    }
+}
+
+public sealed class SeapunkPet : BossCompanionPet<Seapunk>
+{
+    protected override float PetScale => 0.60f;
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class ShrinkerBeetleRelic : BossCompanionRelic<ShrinkerBeetlePet>
+{
+    protected override string CompanionName => "Shrinker Beetle";
+    protected override string RelicIconFileName => "relic_shrinker_beetle.png";
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class ShrinkerBeetleCard : BossCompanionCard<ShrinkerBeetlePet>
+{
+    protected override string CompanionName => "Shrinker Beetle";
+    protected override string CardTitle => "Beetle Juice";
+    protected override string CardArtFileName => "card_shrinker_beetle.png";
+
+    public override MegaCrit.Sts2.Core.Entities.Cards.TargetType TargetType =>
+        IsUpgraded
+            ? MegaCrit.Sts2.Core.Entities.Cards.TargetType.AllEnemies
+            : MegaCrit.Sts2.Core.Entities.Cards.TargetType.AnyEnemy;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DynamicVar("Shrink", 4m),
+        new IfUpgradedVar("IfUpgraded", 0m)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.FromPower<ShrinkPower>()
+    ];
+
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Apply {Shrink:diff} Shrink.{IfUpgraded:show: Targets ALL enemies.|}"),
+        ("flavor", "Everything looks smaller after a good sip.")
+    ];
+
+    public ShrinkerBeetleCard()
+        : base(2, CardType.Skill, MegaCrit.Sts2.Core.Entities.Cards.TargetType.AnyEnemy)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        if (CombatState == null)
+        {
+            return;
+        }
+
+        await TriggerPetAnimation<ShrinkerBeetlePet>("Cast", 0.5f);
+
+        IReadOnlyList<Creature> targets = IsUpgraded
+            ? CombatState.HittableEnemies.Where(enemy => enemy.IsAlive).ToList()
+            : [cardPlay.Target ?? throw new ArgumentNullException(nameof(cardPlay.Target))];
+
+        foreach (Creature target in targets)
+        {
+            NCombatRoom.Instance?.PlaySplashVfx(target, new Color("65cf81"));
+        }
+
+        await PowerCmd.Apply<ShrinkPower>(
+            choiceContext,
+            targets,
+            DynamicVars["Shrink"].BaseValue,
+            Owner.Creature,
+            this);
+    }
+}
+
+public sealed class ShrinkerBeetlePet : BossCompanionPet<ShrinkerBeetle>
+{
+    protected override float PetScale => 0.55f;
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class OperosisRelic : BossCompanionRelic<OperosisPet>
+{
+    protected override string CompanionName => "Operosis";
+    protected override string RelicIconFileName => "relic_operosis.png";
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class OperosisCard : BossCompanionCard<OperosisPet>
+{
+    protected override string CompanionName => "Operosis";
+    protected override string CardTitle => "Little Poke";
+    protected override string CardArtFileName => "card_operosis.png";
+
+    protected override HashSet<CardTag> CanonicalTags => [CardTag.Minion];
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new SummonVar(1m),
+        new OstyDamageVar(5m, ValueProp.Move)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.Static(StaticHoverTip.SummonDynamic, DynamicVars[SummonVar.defaultName])
+    ];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Gain {Summon:diff} Summon. Osty attacks for {OstyDamage:diff} damage."),
+        ("flavor", "Small bones. Big commitment.")
+    ];
+
+    public OperosisCard()
+        : base(1, CardType.Attack, TargetType.AnyEnemy)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
+
+        await TriggerPetAnimation<OperosisPet>("Cast", 0.35f);
+        await OstyCmd.Summon(choiceContext, Owner, DynamicVars[SummonVar.defaultName].BaseValue, this);
+
+        Creature? osty = Owner.Osty;
+        if (osty == null || !osty.IsAlive)
+        {
+            return;
+        }
+
+        OstyDamageVar ostyDamage = (OstyDamageVar)DynamicVars[OstyDamageVar.defaultName];
+        SfxCmd.Play(Osty.ostyAttackSfx);
+        await CreatureCmd.TriggerAnim(osty, Osty.pokeAnim, Osty.attackerAnimDelay);
+        await CreatureCmd.Damage(choiceContext, cardPlay.Target, ostyDamage.BaseValue, ostyDamage.Props, osty, this);
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars[SummonVar.defaultName].UpgradeValueBy(1m);
+        DynamicVars[OstyDamageVar.defaultName].UpgradeValueBy(3m);
+    }
+}
+
+public sealed class OperosisPet : BossCompanionPet<Osty>
+{
+    private const float OperosisScale = 0.30f;
+    private const float OperosisHueShift = -0.45f;
+
+    protected override float PetScale => OperosisScale;
+
+    public override NCreatureVisuals? CreateCustomVisuals()
+    {
+        NCreatureVisuals visuals = ModelDb.Monster<Osty>().CreateVisuals();
+        visuals.SetScaleAndHue(OperosisScale, OperosisHueShift);
+        visuals.CallDeferred(NCreatureVisuals.MethodName.SetScaleAndHue, OperosisScale, OperosisHueShift);
+        return visuals;
+    }
 }
 
 public sealed class WaterfallGiantDelayedPower : CustomPowerModel
@@ -858,19 +1087,186 @@ public sealed class TestSubjectLastTurnDamagePower : CustomPowerModel
 
 internal static class CompanionAnimation
 {
-    public static async Task TryTriggerAnimation(Creature creature, params string[] animationNames)
+    private const float InsatiableDevourScaleMultiplier = 7.0f;
+    private const float InsatiableDevourGrowDuration = 0.76f;
+    private const float InsatiableDevourEatDuration = 3.10f;
+    private const float InsatiableDevourSwallowDelay = 1.35f;
+    private const float InsatiableDevourPostEatHoldDuration = 0.36f;
+    private const float InsatiableDevourRestoreDuration = 1.30f;
+    private const int InsatiableDevourFrontZIndex = 1000;
+
+    public static Task TryTriggerAnimation(Creature creature, params string[] animationNames)
+    {
+        return TryTriggerAnimation(creature, 0.5f, animationNames);
+    }
+
+    public static async Task TryTriggerAnimation(Creature creature, float waitTime, params string[] animationNames)
     {
         foreach (string animationName in animationNames)
         {
             try
             {
-                await CreatureCmd.TriggerAnim(creature, animationName, 0.5f);
+                await CreatureCmd.TriggerAnim(creature, animationName, waitTime);
                 return;
             }
             catch
             {
                 MainFile.Logger.Info($"Animation '{animationName}' did not play.");
             }
+        }
+    }
+
+    public static async Task TriggerInsatiableDevour(Creature insatiable, Creature target)
+    {
+        MainFile.Logger.Info("Triggering The Insatiable EatPlayerTrigger animation from Insatiable Hunger.");
+        SfxCmd.Play("event:/sfx/enemy/enemy_attacks/the_insatiable/the_insatiable_finisher");
+
+        NCreature? insatiableNode = insatiable.GetCreatureNode();
+        if (insatiableNode?.Visuals == null)
+        {
+            Task animationTask = CreatureCmd.TriggerAnim(insatiable, "EatPlayerTrigger", InsatiableDevourEatDuration);
+            await Cmd.Wait(InsatiableDevourSwallowDelay, ignoreCombatEnd: true);
+            await KillTargetAsSwallowed(target);
+            await Cmd.Wait(InsatiableDevourEatDuration - InsatiableDevourSwallowDelay, ignoreCombatEnd: true);
+            await ObserveAnimationTask(animationTask);
+            return;
+        }
+
+        NCreatureVisuals visuals = insatiableNode.Visuals;
+        Vector2 originalScale = visuals.Scale;
+        Vector2 originalPosition = visuals.Position;
+        int originalCreatureZIndex = insatiableNode.ZIndex;
+        bool originalCreatureZAsRelative = insatiableNode.ZAsRelative;
+        int originalVisualZIndex = visuals.ZIndex;
+        bool originalVisualZAsRelative = visuals.ZAsRelative;
+        Node? originalParent = insatiableNode.GetParent();
+        int originalChildIndex = insatiableNode.GetIndex();
+        Vector2 lungeOffset = Vector2.Zero;
+
+        NCreature? targetNode = target.GetCreatureNode();
+        if (targetNode != null)
+        {
+            Vector2 sourceCenter = visuals.VfxSpawnPosition.GlobalPosition;
+            Vector2 targetCenter = targetNode.Hitbox.GlobalPosition + targetNode.Hitbox.Size * 0.5f;
+            lungeOffset = new Vector2(Mathf.Clamp((targetCenter.X - sourceCenter.X) * 0.12f, -90f, 110f), 0f);
+        }
+
+        BringCreatureToFront(insatiableNode, visuals);
+        try
+        {
+            Tween growTween = visuals.CreateTween().SetParallel();
+            growTween.TweenProperty(visuals, "scale", originalScale * InsatiableDevourScaleMultiplier, InsatiableDevourGrowDuration)
+                .SetEase(Tween.EaseType.Out)
+                .SetTrans(Tween.TransitionType.Back);
+            growTween.TweenProperty(visuals, "position", originalPosition + lungeOffset, InsatiableDevourGrowDuration)
+                .SetEase(Tween.EaseType.Out)
+                .SetTrans(Tween.TransitionType.Sine);
+
+            await Cmd.Wait(InsatiableDevourGrowDuration, ignoreCombatEnd: true);
+
+            Task animationTask = CreatureCmd.TriggerAnim(insatiable, "EatPlayerTrigger", InsatiableDevourEatDuration);
+            await Cmd.Wait(InsatiableDevourSwallowDelay, ignoreCombatEnd: true);
+            await KillTargetAsSwallowed(target);
+            await Cmd.Wait(InsatiableDevourEatDuration - InsatiableDevourSwallowDelay, ignoreCombatEnd: true);
+            await ObserveAnimationTask(animationTask);
+
+            await Cmd.Wait(InsatiableDevourPostEatHoldDuration, ignoreCombatEnd: true);
+
+            Tween restoreTween = visuals.CreateTween().SetParallel();
+            restoreTween.TweenProperty(visuals, "scale", originalScale, InsatiableDevourRestoreDuration)
+                .SetEase(Tween.EaseType.InOut)
+                .SetTrans(Tween.TransitionType.Sine);
+            restoreTween.TweenProperty(visuals, "position", originalPosition, InsatiableDevourRestoreDuration)
+                .SetEase(Tween.EaseType.InOut)
+                .SetTrans(Tween.TransitionType.Sine);
+
+            await Cmd.Wait(InsatiableDevourRestoreDuration, ignoreCombatEnd: true);
+        }
+        finally
+        {
+            RestoreCreatureLayer(
+                insatiableNode,
+                visuals,
+                originalParent,
+                originalChildIndex,
+                originalCreatureZIndex,
+                originalCreatureZAsRelative,
+                originalVisualZIndex,
+                originalVisualZAsRelative);
+
+            if (GodotObject.IsInstanceValid(visuals))
+            {
+                visuals.Scale = originalScale;
+                visuals.Position = originalPosition;
+            }
+        }
+    }
+
+    private static void BringCreatureToFront(NCreature creatureNode, NCreatureVisuals visuals)
+    {
+        creatureNode.ZAsRelative = false;
+        creatureNode.ZIndex = InsatiableDevourFrontZIndex;
+        visuals.ZAsRelative = false;
+        visuals.ZIndex = InsatiableDevourFrontZIndex + 1;
+
+        Node? parent = creatureNode.GetParent();
+        parent?.MoveChild(creatureNode, parent.GetChildCount() - 1);
+    }
+
+    private static void RestoreCreatureLayer(
+        NCreature creatureNode,
+        NCreatureVisuals visuals,
+        Node? originalParent,
+        int originalChildIndex,
+        int originalCreatureZIndex,
+        bool originalCreatureZAsRelative,
+        int originalVisualZIndex,
+        bool originalVisualZAsRelative)
+    {
+        if (!GodotObject.IsInstanceValid(creatureNode) || !GodotObject.IsInstanceValid(visuals))
+        {
+            return;
+        }
+
+        creatureNode.ZIndex = originalCreatureZIndex;
+        creatureNode.ZAsRelative = originalCreatureZAsRelative;
+        visuals.ZIndex = originalVisualZIndex;
+        visuals.ZAsRelative = originalVisualZAsRelative;
+
+        if (originalParent != null
+            && GodotObject.IsInstanceValid(originalParent)
+            && creatureNode.GetParent() == originalParent)
+        {
+            int restoredIndex = Math.Clamp(originalChildIndex, 0, Math.Max(0, originalParent.GetChildCount() - 1));
+            originalParent.MoveChild(creatureNode, restoredIndex);
+        }
+    }
+
+    private static async Task KillTargetAsSwallowed(Creature target)
+    {
+        if (!target.IsAlive)
+        {
+            return;
+        }
+
+        NCreature? targetNode = target.GetCreatureNode();
+        if (targetNode != null)
+        {
+            targetNode.Visible = false;
+        }
+
+        await CreatureCmd.Kill(target, true);
+    }
+
+    private static async Task ObserveAnimationTask(Task animationTask)
+    {
+        try
+        {
+            await animationTask;
+        }
+        catch
+        {
+            MainFile.Logger.Info("The Insatiable EatPlayerTrigger animation task did not complete.");
         }
     }
 

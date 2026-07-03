@@ -29,7 +29,10 @@ public sealed class NeowCompanionRelicPool : CustomRelicPoolModel
             ModelDb.Relic<KnowledgeDemonRelic>(),
             ModelDb.Relic<TheInsatiableRelic>(),
             ModelDb.Relic<QueenRelic>(),
-            ModelDb.Relic<TestSubjectRelic>()
+            ModelDb.Relic<TestSubjectRelic>(),
+            ModelDb.Relic<SeapunkRelic>(),
+            ModelDb.Relic<ShrinkerBeetleRelic>(),
+            ModelDb.Relic<OperosisRelic>()
         ];
     }
 }

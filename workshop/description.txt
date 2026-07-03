@@ -1,5 +1,18 @@
-Start every run with Byrdpip, but with a tiny Soul Fysh companion.
+Choose a companion after Neow's starting relic.
 
-This gives you the Byrd Swoop card immediately instead of needing the Byrdonis Nest event. The pet summon is cosmetic-swapped into a harmless small Soul Fysh.
+Neow Companions adds a growing pool of companion relics based on Slay the Spire 2 creatures and bosses. Each companion has a combat pet, relic icon, custom card, card art, and themed animation triggers.
+
+Current companion pool:
+Byrdpip, Soul Fysh Pip, Wriggler, Ceremonial Beast, Kin Follower, Eye With Teeth, Gremlin Merc, Thieving Hopper, Aeonglass, Lagavulin Matriarch, The Kin, Waterfall Giant, Vantom, Knowledge Demon, The Insatiable, Queen, Test Subject, Seapunk, Shrinker Beetle, and Operosis.
+
+Recent highlights:
+- Added Seapunk, Shrinker Beetle, and Operosis companions.
+- Added new companion card and relic art, including updated art for Seapunk, Shrinker Beetle, and Operosis.
+- Added mod settings for showing all companion choices, granting a random companion with no choices, and disabling companion card grants.
+- Improved card preview values for damage, block, summon, and Osty damage where buffs, debuffs, Dexterity, Vulnerable, Weak, and related modifiers apply.
+- Added and tuned companion animations, including Insatiable devour, Waterfall Giant explosion, Seapunk multi-kick, Shrinker Beetle cast/splash, Knowledge Demon buffing, Kin bomb/attack behavior, and Operosis/Osty summon attacks.
+- Tuned Operosis pet visuals with a larger mini-Osty model, enemy-facing orientation, and warmer red/orange coloring.
+- Fixed several Exhaust/Retain text and upgrade issues.
+- Fixed Hopper Jab/Thieving Hopper permanent deck reward behavior.
 
 Requires BaseLib.

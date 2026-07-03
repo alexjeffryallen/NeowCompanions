@@ -66,6 +66,9 @@ public static class NeowCompanionChoicePatch
             CompanionKind.TheInsatiable => "THE_INSATIABLE.title",
             CompanionKind.Queen => "QUEEN.title",
             CompanionKind.TestSubject => "TEST_SUBJECT.title",
+            CompanionKind.Seapunk => "SEAPUNK.title",
+            CompanionKind.ShrinkerBeetle => "SHRINKER_BEETLE.title",
+            CompanionKind.Operosis => "OPEROSIS.title",
             _ => "CHOOSE_COMPANION.title"
         };
 
@@ -88,6 +91,9 @@ public static class NeowCompanionChoicePatch
             CompanionKind.TheInsatiable => "THE_INSATIABLE.description",
             CompanionKind.Queen => "QUEEN.description",
             CompanionKind.TestSubject => "TEST_SUBJECT.description",
+            CompanionKind.Seapunk => "SEAPUNK.description",
+            CompanionKind.ShrinkerBeetle => "SHRINKER_BEETLE.description",
+            CompanionKind.Operosis => "OPEROSIS.description",
             _ => "CHOOSE_COMPANION.description"
         };
     }
@@ -110,7 +116,10 @@ public static class NeowCompanionChoicePatch
         new CompanionOption(CompanionKind.KnowledgeDemon, "Knowledge Demon", typeof(KnowledgeDemonRelic), typeof(KnowledgeDemonCard)),
         new CompanionOption(CompanionKind.TheInsatiable, "The Insatiable", typeof(TheInsatiableRelic), typeof(TheInsatiableCard)),
         new CompanionOption(CompanionKind.Queen, "Queen", typeof(QueenRelic), typeof(QueenCard)),
-        new CompanionOption(CompanionKind.TestSubject, "Test Subject", typeof(TestSubjectRelic), typeof(TestSubjectCard))
+        new CompanionOption(CompanionKind.TestSubject, "Test Subject", typeof(TestSubjectRelic), typeof(TestSubjectCard)),
+        new CompanionOption(CompanionKind.Seapunk, "Seapunk", typeof(SeapunkRelic), typeof(SeapunkCard)),
+        new CompanionOption(CompanionKind.ShrinkerBeetle, "Shrinker Beetle", typeof(ShrinkerBeetleRelic), typeof(ShrinkerBeetleCard)),
+        new CompanionOption(CompanionKind.Operosis, "Operosis", typeof(OperosisRelic), typeof(OperosisCard))
     ];
 
     public static void Postfix(Neow __instance, ref IReadOnlyList<EventOption> __result)
@@ -134,6 +143,12 @@ public static class NeowCompanionChoicePatch
                 {
                     GD.Print("[NeowCompanions] Original Neow relic option selected, delaying original completion.");
                     await Task.CompletedTask;
+
+                    if (ModSettings.RandomCompanionNoChoices)
+                    {
+                        await ChooseRandomCompanion(__instance, capturedOriginalOption);
+                        return;
+                    }
 
                     ShowCompanionChoices(__instance, capturedOriginalOption);
                 },
@@ -241,6 +256,13 @@ public static class NeowCompanionChoicePatch
             neow,
             originalNeowOption.Description,
             companionOptions);
+    }
+
+    private static Task ChooseRandomCompanion(Neow neow, EventOption originalNeowOption)
+    {
+        CompanionOption companion = CompanionPool.OrderBy(_ => Guid.NewGuid()).First();
+        GD.Print("[NeowCompanions] Random companion selected: " + companion.DebugName);
+        return ChooseCompanion(neow, companion, originalNeowOption);
     }
 
     private static void AddNavigationOption(

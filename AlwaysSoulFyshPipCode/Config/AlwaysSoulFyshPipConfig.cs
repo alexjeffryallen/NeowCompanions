@@ -18,6 +18,12 @@ public sealed class NeowCompanionsConfig : SimpleModConfig
         set => ModSettings.OfferAllCompanions = value;
     }
 
+    public static bool RandomCompanionNoChoices
+    {
+        get => ModSettings.RandomCompanionNoChoices;
+        set => ModSettings.RandomCompanionNoChoices = value;
+    }
+
     public static bool GrantCompanionCards
     {
         get => ModSettings.GrantCompanionCards;

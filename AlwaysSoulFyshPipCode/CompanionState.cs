@@ -19,7 +19,10 @@ public enum CompanionKind
     KnowledgeDemon,
     TheInsatiable,
     Queen,
-    TestSubject
+    TestSubject,
+    Seapunk,
+    ShrinkerBeetle,
+    Operosis
 }
 
 public static class CompanionState
