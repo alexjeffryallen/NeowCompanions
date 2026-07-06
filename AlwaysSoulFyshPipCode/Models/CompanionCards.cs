@@ -441,10 +441,10 @@ public sealed class ThievingHopperCard : CustomCardModel
         await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this);
         if (!cardPlay.Target.IsAlive)
         {
-            CardModel randomCard = ModelDb.AllCards
+            List<CardModel> candidateCards = ModelDb.AllCards
                 .Where(card => card.CanBeGeneratedInCombat && card.ShouldShowInCardLibrary)
-                .OrderBy(_ => Guid.NewGuid())
-                .First();
+                .ToList();
+            CardModel randomCard = Owner.PlayerRng.Rewards.NextItem(candidateCards) ?? candidateCards[0];
 
             CardModel deckCard = Owner.RunState.CreateCard(randomCard, Owner);
             MainFile.Logger.Info($"Hopper Jab added {deckCard.GetType().Name} to the permanent deck.");

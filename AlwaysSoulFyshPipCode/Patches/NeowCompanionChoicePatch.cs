@@ -173,8 +173,8 @@ public static class NeowCompanionChoicePatch
         GD.Print("[NeowCompanions] Showing companion choices.");
 
         List<CompanionOption> offeredCompanions = ModSettings.OfferAllCompanions
-            ? CompanionPool
-            : CompanionPool.OrderBy(_ => Guid.NewGuid()).Take(Math.Min(3, CompanionPool.Count)).ToList();
+            ? CompanionPool.ToList()
+            : GetSeededCompanionChoices(neow, Math.Min(3, CompanionPool.Count));
 
         int maxPage = Math.Max(0, (int)Math.Ceiling(offeredCompanions.Count / (double)CompanionPageSize) - 1);
         page = Math.Clamp(page, 0, maxPage);
@@ -260,9 +260,16 @@ public static class NeowCompanionChoicePatch
 
     private static Task ChooseRandomCompanion(Neow neow, EventOption originalNeowOption)
     {
-        CompanionOption companion = CompanionPool.OrderBy(_ => Guid.NewGuid()).First();
+        CompanionOption companion = neow.Rng.NextItem(CompanionPool) ?? CompanionPool[0];
         GD.Print("[NeowCompanions] Random companion selected: " + companion.DebugName);
         return ChooseCompanion(neow, companion, originalNeowOption);
+    }
+
+    private static List<CompanionOption> GetSeededCompanionChoices(Neow neow, int count)
+    {
+        List<CompanionOption> companions = CompanionPool.ToList();
+        neow.Rng.Shuffle(companions);
+        return companions.Take(count).ToList();
     }
 
     private static void AddNavigationOption(

@@ -999,7 +999,8 @@ public sealed class WaterfallGiantRandomDelayedPower : CustomPowerModel
             return;
         }
 
-        Creature? target = CombatState.HittableEnemies.Where(enemy => enemy.IsAlive).OrderBy(_ => Guid.NewGuid()).FirstOrDefault();
+        List<Creature> targets = CombatState.HittableEnemies.Where(enemy => enemy.IsAlive).ToList();
+        Creature? target = Owner.Player?.RunState.Rng.CombatTargets.NextItem(targets) ?? targets.FirstOrDefault();
         if (target != null)
         {
             await CompanionAnimation.TriggerWaterfallGiantExplosion(Owner);
