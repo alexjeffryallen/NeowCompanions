@@ -3,8 +3,10 @@ using System.Threading.Tasks;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 
@@ -76,6 +78,16 @@ public abstract class CompanionRelicModel : RelicModel, ICustomModel, ILocalizat
     public abstract string IconFileName { get; }
 
     public abstract List<(string, string)> Localization { get; }
+
+    public override Task BeforeCardPlayed(CardPlay cardPlay)
+    {
+        if (cardPlay.Card.Owner != Owner || cardPlay.Card.Type != CardType.Attack)
+        {
+            return Task.CompletedTask;
+        }
+
+        return CompanionAnimation.TriggerAttackForActiveCompanions(Owner);
+    }
 }
 
 [Pool(typeof(NeowCompanionRelicPool))]
@@ -220,7 +232,7 @@ public sealed class WrigglerPet : CustomMonsterModel
     {
         MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals visuals = ModelDb.Monster<Wriggler>().CreateVisuals();
         visuals.Scale = new Godot.Vector2(-PetScale, PetScale);
-        return visuals;
+        return CompanionDrag.MakeDraggable(visuals);
     }
 
     public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(
@@ -256,7 +268,7 @@ public sealed class EyeWithTeethPet : CustomMonsterModel
     {
         MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals visuals = ModelDb.Monster<EyeWithTeeth>().CreateVisuals();
         visuals.Scale = new Godot.Vector2(-PetScale, PetScale);
-        return visuals;
+        return CompanionDrag.MakeDraggable(visuals);
     }
 
     public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(
@@ -292,7 +304,7 @@ public sealed class GremlinMercPet : CustomMonsterModel
     {
         MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals visuals = ModelDb.Monster<GremlinMerc>().CreateVisuals();
         visuals.Scale = new Godot.Vector2(-PetScale, PetScale);
-        return visuals;
+        return CompanionDrag.MakeDraggable(visuals);
     }
 
     public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(
@@ -329,7 +341,7 @@ public sealed class FatGremlinSplitPet : CustomMonsterModel
         MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals visuals = ModelDb.Monster<FatGremlin>().CreateVisuals();
         visuals.Scale = new Godot.Vector2(-PetScale, PetScale);
         GremlinMercSplitVisuals.RegisterFatGremlin(visuals);
-        return visuals;
+        return CompanionDrag.MakeDraggable(visuals);
     }
 
     public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(
@@ -366,7 +378,7 @@ public sealed class SneakyGremlinSplitPet : CustomMonsterModel
         MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals visuals = ModelDb.Monster<SneakyGremlin>().CreateVisuals();
         visuals.Scale = new Godot.Vector2(-PetScale, PetScale);
         GremlinMercSplitVisuals.RegisterSneakyGremlin(visuals);
-        return visuals;
+        return CompanionDrag.MakeDraggable(visuals);
     }
 
     public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(
@@ -402,7 +414,7 @@ public sealed class ThievingHopperPet : CustomMonsterModel
     {
         MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals visuals = ModelDb.Monster<ThievingHopper>().CreateVisuals();
         visuals.Scale = new Godot.Vector2(-PetScale, PetScale);
-        return visuals;
+        return CompanionDrag.MakeDraggable(visuals);
     }
 
     public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(
@@ -438,7 +450,7 @@ public sealed class KinFollowerPet : CustomMonsterModel
     {
         MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals visuals = ModelDb.Monster<KinFollower>().CreateVisuals();
         visuals.Scale = new Godot.Vector2(-PetScale, PetScale);
-        return visuals;
+        return CompanionDrag.MakeDraggable(visuals);
     }
 
     public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(
@@ -476,7 +488,7 @@ public sealed class CeremonialBeastPet : CustomMonsterModel
     {
         MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals visuals = ModelDb.Monster<CeremonialBeast>().CreateVisuals();
         visuals.Scale = new Godot.Vector2(-PetScale, PetScale);
-        return visuals;
+        return CompanionDrag.MakeDraggable(visuals);
     }
 
     public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(

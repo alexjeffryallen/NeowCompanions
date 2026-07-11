@@ -26,7 +26,7 @@ public sealed class SoulFyshPipPet : CustomMonsterModel
     {
         NCreatureVisuals visuals = ModelDb.Monster<SoulFysh>().CreateVisuals();
         visuals.Scale = new Vector2(-PetScale, PetScale);
-        return visuals;
+        return CompanionDrag.MakeDraggable(visuals);
     }
 
     public override CreatureAnimator? SetupCustomAnimationStates(MegaSprite controller)

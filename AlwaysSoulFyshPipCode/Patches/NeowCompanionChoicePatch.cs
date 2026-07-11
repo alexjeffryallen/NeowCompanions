@@ -26,6 +26,12 @@ public static class NeowCompanionChoicePatch
 {
     private const int CompanionPageSize = 6;
 
+    private static readonly FieldInfo? EventOptionOnChosenField =
+        AccessTools.Field(typeof(EventOption), "<OnChosen>k__BackingField");
+
+    private static readonly HashSet<EventOption> WrappedInitialOptions =
+        new(ReferenceEqualityComparer.Instance);
+
     internal static IReadOnlyList<string>? ActiveCompanionOptionTexts { get; private set; }
 
     internal static IReadOnlyList<string>? ActiveCompanionIconFiles { get; private set; }
@@ -69,6 +75,12 @@ public static class NeowCompanionChoicePatch
             CompanionKind.Seapunk => "SEAPUNK.title",
             CompanionKind.ShrinkerBeetle => "SHRINKER_BEETLE.title",
             CompanionKind.Operosis => "OPEROSIS.title",
+            CompanionKind.Architect => "ARCHITECT.title",
+            CompanionKind.Rustclad => "RUSTCLAD.title",
+            CompanionKind.Shadeleaf => "SHADELEAF.title",
+            CompanionKind.Glitchling => "GLITCHLING.title",
+            CompanionKind.Bonebinder => "BONEBINDER.title",
+            CompanionKind.GildedPage => "GILDED_PAGE.title",
             _ => "CHOOSE_COMPANION.title"
         };
 
@@ -94,6 +106,12 @@ public static class NeowCompanionChoicePatch
             CompanionKind.Seapunk => "SEAPUNK.description",
             CompanionKind.ShrinkerBeetle => "SHRINKER_BEETLE.description",
             CompanionKind.Operosis => "OPEROSIS.description",
+            CompanionKind.Architect => "ARCHITECT.description",
+            CompanionKind.Rustclad => "RUSTCLAD.description",
+            CompanionKind.Shadeleaf => "SHADELEAF.description",
+            CompanionKind.Glitchling => "GLITCHLING.description",
+            CompanionKind.Bonebinder => "BONEBINDER.description",
+            CompanionKind.GildedPage => "GILDED_PAGE.description",
             _ => "CHOOSE_COMPANION.description"
         };
     }
@@ -119,56 +137,79 @@ public static class NeowCompanionChoicePatch
         new CompanionOption(CompanionKind.TestSubject, "Test Subject", typeof(TestSubjectRelic), typeof(TestSubjectCard)),
         new CompanionOption(CompanionKind.Seapunk, "Seapunk", typeof(SeapunkRelic), typeof(SeapunkCard)),
         new CompanionOption(CompanionKind.ShrinkerBeetle, "Shrinker Beetle", typeof(ShrinkerBeetleRelic), typeof(ShrinkerBeetleCard)),
-        new CompanionOption(CompanionKind.Operosis, "Operosis", typeof(OperosisRelic), typeof(OperosisCard))
+        new CompanionOption(CompanionKind.Operosis, "Operosis", typeof(OperosisRelic), typeof(OperosisCard)),
+        new CompanionOption(CompanionKind.Architect, "The Architect", typeof(ArchitectRelic), typeof(ArchitectCard)),
+        new CompanionOption(CompanionKind.Rustclad, "Rustclad", typeof(RustcladRelic), typeof(BuffUpCard)),
+        new CompanionOption(CompanionKind.Shadeleaf, "Shadeleaf", typeof(ShadeleafRelic), typeof(NeedleTossCard)),
+        new CompanionOption(CompanionKind.Glitchling, "Glitchling", typeof(GlitchlingRelic), typeof(OverclockCard)),
+        new CompanionOption(CompanionKind.Bonebinder, "Bonebinder", typeof(BonebinderRelic), typeof(GraveCallCard)),
+        new CompanionOption(CompanionKind.GildedPage, "Gilded Page", typeof(GildedPageRelic), typeof(CommandingFlourishCard))
     ];
 
-    public static void Postfix(Neow __instance, ref IReadOnlyList<EventOption> __result)
+    public static void Postfix(AncientEventModel __instance, ref IReadOnlyList<EventOption> __result)
     {
-        GD.Print("[NeowCompanions] GenerateInitialOptions patch HIT. Option count: " + (__result?.Count ?? -1));
-
-        if (__result == null || __result.Count == 0)
+        if (__instance is not Neow neow || __result == null || __result.Count == 0)
         {
             return;
         }
 
-        List<EventOption> wrappedOptions = new();
+        GD.Print("[NeowCompanions] GenerateInitialOptionsWrapper patch HIT. Option count: " + __result.Count);
 
-        foreach (EventOption originalOption in __result)
+        int wrappedCount = 0;
+        foreach (EventOption option in __result)
         {
-            EventOption capturedOriginalOption = originalOption;
-
-            EventOption wrapped = new EventOption(
-                __instance,
-                async () =>
-                {
-                    GD.Print("[NeowCompanions] Original Neow relic option selected, delaying original completion.");
-                    await Task.CompletedTask;
-
-                    if (ModSettings.RandomCompanionNoChoices)
-                    {
-                        await ChooseRandomCompanion(__instance, capturedOriginalOption);
-                        return;
-                    }
-
-                    ShowCompanionChoices(__instance, capturedOriginalOption);
-                },
-                originalOption.Title,
-                originalOption.Description,
-                originalOption.TextKey,
-                originalOption.HoverTips);
-
-            if (originalOption.Relic != null)
+            if (TryWrapInitialNeowOption(neow, option))
             {
-                wrapped.WithRelic(originalOption.Relic);
+                wrappedCount++;
             }
-
-            wrappedOptions.Add(wrapped);
         }
 
-        __result = wrappedOptions;
+        GD.Print("[NeowCompanions] Wrapped Neow option actions: " + wrappedCount);
     }
 
-    private static void ShowCompanionChoices(Neow neow, EventOption originalNeowOption, int page = 0)
+    private static bool TryWrapInitialNeowOption(Neow neow, EventOption option)
+    {
+        if (EventOptionOnChosenField == null
+            || option.IsLocked
+            || option.IsProceed
+            || WrappedInitialOptions.Contains(option))
+        {
+            return false;
+        }
+
+        if (EventOptionOnChosenField.GetValue(option) is not Func<Task> originalOnChosen)
+        {
+            return false;
+        }
+
+        Func<Task> wrappedOnChosen = async () =>
+        {
+            GD.Print("[NeowCompanions] Neow option selected, delaying original completion for companion flow: " + option.TextKey);
+            if (ModSettings.RandomCompanionNoChoices)
+            {
+                await ChooseRandomCompanion(neow, originalOnChosen);
+                return;
+            }
+
+            ShowCompanionChoices(neow, option, originalOnChosen);
+        };
+
+        try
+        {
+            EventOptionOnChosenField.SetValue(option, wrappedOnChosen);
+        }
+        catch (Exception ex)
+        {
+            MainFile.Logger.Error("[NeowCompanions] Could not wrap Neow option action: " + ex);
+            GD.PrintErr("[NeowCompanions] Could not wrap Neow option action: " + ex);
+            return false;
+        }
+
+        WrappedInitialOptions.Add(option);
+        return true;
+    }
+
+    private static void ShowCompanionChoices(Neow neow, EventOption selectedNeowOption, Func<Task> finishOriginalOption, int page = 0)
     {
         GD.Print("[NeowCompanions] Showing companion choices.");
 
@@ -208,10 +249,10 @@ public static class NeowCompanionChoicePatch
                 neow,
                 async () =>
                 {
-                    await ChooseCompanion(neow, companion, originalNeowOption);
+                    await ChooseCompanion(neow, companion, finishOriginalOption);
                 },
-                originalNeowOption.Title,
-                originalNeowOption.Description,
+                selectedNeowOption.Title,
+                selectedNeowOption.Description,
                 "COMPANION." + companion.Kind,
                 hoverTips);
 
@@ -226,11 +267,11 @@ public static class NeowCompanionChoicePatch
             {
                 AddNavigationOption(
                     neow,
-                    originalNeowOption,
+                    selectedNeowOption,
                     companionOptions,
                     optionTexts,
                     iconFiles,
-                    () => ShowCompanionChoices(neow, originalNeowOption, page - 1),
+                    () => ShowCompanionChoices(neow, selectedNeowOption, finishOriginalOption, page - 1),
                     "Previous companions",
                     $"Page {page} of {maxPage + 1}");
             }
@@ -239,11 +280,11 @@ public static class NeowCompanionChoicePatch
             {
                 AddNavigationOption(
                     neow,
-                    originalNeowOption,
+                    selectedNeowOption,
                     companionOptions,
                     optionTexts,
                     iconFiles,
-                    () => ShowCompanionChoices(neow, originalNeowOption, page + 1),
+                    () => ShowCompanionChoices(neow, selectedNeowOption, finishOriginalOption, page + 1),
                     "More companions",
                     $"Page {page + 2} of {maxPage + 1}");
             }
@@ -254,15 +295,15 @@ public static class NeowCompanionChoicePatch
 
         InvokeSetEventState(
             neow,
-            originalNeowOption.Description,
+            selectedNeowOption.Description,
             companionOptions);
     }
 
-    private static Task ChooseRandomCompanion(Neow neow, EventOption originalNeowOption)
+    private static Task ChooseRandomCompanion(Neow neow, Func<Task> finishOriginalOption)
     {
         CompanionOption companion = neow.Rng.NextItem(CompanionPool) ?? CompanionPool[0];
         GD.Print("[NeowCompanions] Random companion selected: " + companion.DebugName);
-        return ChooseCompanion(neow, companion, originalNeowOption);
+        return ChooseCompanion(neow, companion, finishOriginalOption);
     }
 
     private static List<CompanionOption> GetSeededCompanionChoices(Neow neow, int count)
@@ -299,14 +340,14 @@ public static class NeowCompanionChoicePatch
         iconFiles.Add(string.Empty);
     }
 
-    private static async Task ChooseCompanion(Neow neow, CompanionOption companion, EventOption originalNeowOption)
+    private static async Task ChooseCompanion(Neow neow, CompanionOption companion, Func<Task> finishOriginalOption)
     {
         GD.Print("[NeowCompanions] Chose companion: " + companion.DebugName);
 
         if (neow.Owner == null)
         {
             GD.PrintErr("[NeowCompanions] ERROR: Neow Owner was null when choosing companion.");
-            await originalNeowOption.Chosen();
+            await finishOriginalOption();
             return;
         }
 
@@ -321,7 +362,7 @@ public static class NeowCompanionChoicePatch
         }
 
         GD.Print("[NeowCompanions] Finishing original Neow option now.");
-        await originalNeowOption.Chosen();
+        await finishOriginalOption();
     }
 
     private static LocString CompanionLoc(string key)

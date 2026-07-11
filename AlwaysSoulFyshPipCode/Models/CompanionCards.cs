@@ -178,10 +178,11 @@ public sealed class CeremonialBeastCard : CustomCardModel
         }
 
         var beast = Owner.PlayerCombatState?.GetPet<CeremonialBeastPet>();
-        if (beast != null && !beast.IsDead)
+        if (beast != null && !beast.IsDead && !CompanionAnimation.IsAttackAnimationSuppressed(beast))
         {
             SfxCmd.Play("event:/sfx/enemy/enemy_attacks/ceremonial_beast/ceremonial_beast_plow");
             await CompanionAnimation.TryTriggerAnimation(beast, "Plow", "Charge", "Attack");
+            CompanionAnimation.SuppressAttackAnimations(beast);
         }
 
         await CreatureCmd.Damage(
@@ -493,3 +494,4 @@ public sealed class SelfAwareBlockVar : BlockVar
         base.UpdateCardPreview(card, previewMode, target ?? card.Owner?.Creature, runGlobalHooks);
     }
 }
+

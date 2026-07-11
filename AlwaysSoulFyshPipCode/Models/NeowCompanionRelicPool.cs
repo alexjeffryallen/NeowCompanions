@@ -32,7 +32,13 @@ public sealed class NeowCompanionRelicPool : CustomRelicPoolModel
             ModelDb.Relic<TestSubjectRelic>(),
             ModelDb.Relic<SeapunkRelic>(),
             ModelDb.Relic<ShrinkerBeetleRelic>(),
-            ModelDb.Relic<OperosisRelic>()
+            ModelDb.Relic<OperosisRelic>(),
+            ModelDb.Relic<ArchitectRelic>(),
+            ModelDb.Relic<RustcladRelic>(),
+            ModelDb.Relic<ShadeleafRelic>(),
+            ModelDb.Relic<GlitchlingRelic>(),
+            ModelDb.Relic<BonebinderRelic>(),
+            ModelDb.Relic<GildedPageRelic>()
         ];
     }
 }

@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using NeowCompanions.NeowCompanionsCode.Assets;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
 using Godot;
+using MegaCrit.Sts2.Core.Assets;
+using MegaCrit.Sts2.Core.Bindings.MegaSpine;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
@@ -13,12 +16,16 @@ using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Models.Monsters;
+using MegaCrit.Sts2.Core.Models.Orbs;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
+using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.Core.ValueProps;
 
 namespace NeowCompanions.NeowCompanionsCode.Models;
@@ -60,7 +67,7 @@ public abstract class BossCompanionPet<TMonster> : CustomMonsterModel
     {
         NCreatureVisuals visuals = ModelDb.Monster<TMonster>().CreateVisuals();
         visuals.Scale = new Vector2(-PetScale, PetScale);
-        return visuals;
+        return visuals == null ? null : CompanionDrag.MakeDraggable(visuals);
     }
 
     public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(
@@ -272,7 +279,7 @@ public sealed class LagavulinMatriarchCard : BossCompanionCard<LagavulinMatriarc
         Creature? matriarch = Owner.PlayerCombatState?.GetPet<LagavulinMatriarchPet>();
         if (matriarch != null && !matriarch.IsDead)
         {
-            await CompanionAnimation.TryTriggerAnimation(matriarch, "WakeUp", "Wake", "Awake", "Attack");
+            await CompanionAnimation.TriggerLagavulinMatriarchWake(matriarch);
         }
 
         await PowerCmd.Apply<StrengthPower>(choiceContext, Owner.Creature, DynamicVars.Strength.BaseValue, Owner.Creature, this);
@@ -932,7 +939,1502 @@ public sealed class OperosisPet : BossCompanionPet<Osty>
         NCreatureVisuals visuals = ModelDb.Monster<Osty>().CreateVisuals();
         visuals.SetScaleAndHue(OperosisScale, OperosisHueShift);
         visuals.CallDeferred(NCreatureVisuals.MethodName.SetScaleAndHue, OperosisScale, OperosisHueShift);
-        return visuals;
+        CompanionSelectivePalette.ApplyShader(visuals, CompanionSelectivePalette.OperosisShader);
+        visuals.AddChild(new OperosisVfxColorApplier());
+        if (visuals == null)
+        {
+            return null;
+        }
+
+        return CompanionDrag.MakeDraggable(visuals);
+    }
+}
+
+internal sealed partial class OperosisVfxColorApplier : Node
+{
+    private int framesWaited;
+    private bool logged;
+
+    public override void _Process(double delta)
+    {
+        framesWaited++;
+        if (GetParent() is not NCreatureVisuals visuals)
+        {
+            if (framesWaited > 300)
+            {
+                QueueFree();
+            }
+            return;
+        }
+
+        int recolored = RecolorVfxMaterials(visuals);
+        if (!logged && framesWaited is 2 or 30)
+        {
+            logged = true;
+            MainFile.Logger.Info($"[NeowCompanions] Operosis VFX color pass recolored {recolored} material(s).");
+            if (recolored == 0)
+            {
+                MainFile.Logger.Info(DumpOperosisVisualTree(visuals, 0, 5));
+            }
+        }
+
+        if (framesWaited > 300)
+        {
+            QueueFree();
+        }
+    }
+
+    private static int RecolorVfxMaterials(Node node)
+    {
+        int count = 0;
+        RecolorVfxMaterials(node, ref count);
+        return count;
+    }
+
+    private static void RecolorVfxMaterials(Node node, ref int count)
+    {
+        if (node is CanvasItem canvasItem && canvasItem.Material is ShaderMaterial shaderMaterial)
+        {
+            bool hasOuterColor = HasShaderUniform(shaderMaterial, "OuterColor");
+            bool hasInnerColor = HasShaderUniform(shaderMaterial, "InnerColor");
+            if (hasOuterColor || hasInnerColor)
+            {
+                ShaderMaterial localMaterial = shaderMaterial.ResourceLocalToScene
+                    ? shaderMaterial
+                    : (ShaderMaterial)shaderMaterial.Duplicate();
+                localMaterial.ResourceLocalToScene = true;
+                if (hasOuterColor)
+                {
+                    localMaterial.SetShaderParameter("OuterColor", new Color(1.0f, 0.34f, 0.04f, 1.0f));
+                }
+                if (hasInnerColor)
+                {
+                    localMaterial.SetShaderParameter("InnerColor", new Color(0.18f, 0.015f, 0.0f, 1.0f));
+                }
+
+                canvasItem.Material = localMaterial;
+                canvasItem.UseParentMaterial = false;
+                count++;
+            }
+        }
+
+        foreach (Node child in node.GetChildren())
+        {
+            RecolorVfxMaterials(child, ref count);
+        }
+    }
+
+    private static bool HasShaderUniform(ShaderMaterial material, string uniformName)
+    {
+        Shader? shader = material.Shader;
+        if (shader == null)
+        {
+            return false;
+        }
+
+        foreach (Godot.Collections.Dictionary uniform in shader.GetShaderUniformList())
+        {
+            if (uniform.TryGetValue("name", out Variant nameVariant)
+                && nameVariant.AsString() == uniformName)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string DumpOperosisVisualTree(Node node, int depth, int maxDepth)
+    {
+        StringBuilder builder = new();
+        DumpOperosisVisualTree(node, depth, maxDepth, builder);
+        return builder.ToString();
+    }
+
+    private static void DumpOperosisVisualTree(Node node, int depth, int maxDepth, StringBuilder builder)
+    {
+        if (depth > maxDepth)
+        {
+            return;
+        }
+
+        bool interesting = depth <= 1
+            || node is Sprite2D
+            || node.GetClass().Contains("Spine", StringComparison.OrdinalIgnoreCase)
+            || node.Name.ToString().Contains("fire", StringComparison.OrdinalIgnoreCase)
+            || node.Name.ToString().Contains("flame", StringComparison.OrdinalIgnoreCase)
+            || node.Name.ToString().Contains("vfx", StringComparison.OrdinalIgnoreCase);
+
+        if (interesting)
+        {
+            builder.Append(' ', depth * 2);
+            builder.Append("[NeowCompanions] Operosis node ");
+            builder.Append(node.GetPath());
+            builder.Append(" :: ");
+            builder.Append(node.GetType().Name);
+            builder.Append(" class=");
+            builder.Append(node.GetClass());
+            if (node is CanvasItem canvasItem)
+            {
+                builder.Append(" material=");
+                builder.Append(canvasItem.Material?.GetType().Name ?? "<null>");
+                builder.Append(" materialPath=");
+                builder.Append(canvasItem.Material?.ResourcePath ?? "<null>");
+            }
+            builder.AppendLine();
+        }
+
+        foreach (Node child in node.GetChildren())
+        {
+            DumpOperosisVisualTree(child, depth + 1, maxDepth, builder);
+        }
+    }
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class ArchitectRelic : BossCompanionRelic<ArchitectPet>
+{
+    protected override string CompanionName => "The Architect";
+    protected override string RelicIconFileName => "relic_architect.png";
+
+    public override async Task BeforeCardPlayed(CardPlay cardPlay)
+    {
+        await base.BeforeCardPlayed(cardPlay);
+
+        if (cardPlay.Card.Owner != Owner)
+        {
+            return;
+        }
+
+        if (!ArchitectCard.TryConsumeGeneratedCompanionCard(cardPlay.Card))
+        {
+            return;
+        }
+
+        Creature? architect = Owner.PlayerCombatState?.GetPet<ArchitectPet>();
+        if (architect == null || architect.IsDead)
+        {
+            return;
+        }
+
+        MainFile.Logger.Info("Triggering Architect attack animation from generated companion card.");
+        await CreatureCmd.TriggerAnim(architect, "Attack", 0.5f);
+    }
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class ArchitectCard : BossCompanionCard<ArchitectPet>
+{
+    private static readonly HashSet<CardModel> GeneratedCompanionCards = new(ReferenceEqualityComparer.Instance);
+
+    protected override string CompanionName => "The Architect";
+    protected override string CardTitle => "Grand Design";
+    protected override string CardArtFileName => "card_architect.png";
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new IfUpgradedVar("IfUpgraded", 0m)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+    ];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Generate a random companion card.{IfUpgraded:show: It is Upgraded.|}"),
+        ("flavor", "A plan inside a plan, folded into a sharper plan.")
+    ];
+
+    public ArchitectCard()
+        : base(0, CardType.Skill, TargetType.Self)
+    {
+    }
+
+    internal static bool TryConsumeGeneratedCompanionCard(CardModel card)
+    {
+        return GeneratedCompanionCards.Remove(card);
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        if (CombatState == null)
+        {
+            return;
+        }
+
+        List<CardModel> options = GetGeneratedCompanionPool().ToList();
+        CardModel? canonicalCard = Owner.RunState.Rng.CombatCardGeneration.NextItem(options);
+        if (canonicalCard == null)
+        {
+            return;
+        }
+
+        CardModel generatedCard = CombatState.CreateCard(canonicalCard, Owner);
+        if (IsUpgraded)
+        {
+            CardCmd.Upgrade(generatedCard);
+        }
+
+        GeneratedCompanionCards.Add(generatedCard);
+        MainFile.Logger.Info($"Grand Design generated {generatedCard.GetType().Name}.");
+        await CardPileCmd.AddGeneratedCardToCombat(generatedCard, PileType.Hand, Owner);
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars["IfUpgraded"].UpgradeValueBy(0m);
+    }
+
+    private static IEnumerable<CardModel> GetGeneratedCompanionPool()
+    {
+        return
+        [
+            ModelDb.Card<ByrdSwoop>(),
+            ModelDb.Card<FyshSwoop>(),
+            ModelDb.Card<WrigglerCard>(),
+            ModelDb.Card<CeremonialBeastCard>(),
+            ModelDb.Card<KinFollowerCard>(),
+            ModelDb.Card<EyeWithTeethCard>(),
+            ModelDb.Card<GremlinMercCard>(),
+            ModelDb.Card<ThievingHopperCard>(),
+            ModelDb.Card<AeonglassCard>(),
+            ModelDb.Card<LagavulinMatriarchCard>(),
+            ModelDb.Card<TheKinCard>(),
+            ModelDb.Card<WaterfallGiantCard>(),
+            ModelDb.Card<VantomCard>(),
+            ModelDb.Card<KnowledgeDemonCard>(),
+            ModelDb.Card<TheInsatiableCard>(),
+            ModelDb.Card<QueenCard>(),
+            ModelDb.Card<TestSubjectCard>(),
+            ModelDb.Card<SeapunkCard>(),
+            ModelDb.Card<ShrinkerBeetleCard>(),
+            ModelDb.Card<OperosisCard>(),
+            ModelDb.Card<BuffUpCard>(),
+            ModelDb.Card<NeedleTossCard>(),
+            ModelDb.Card<OverclockCard>(),
+            ModelDb.Card<GraveCallCard>(),
+            ModelDb.Card<CommandingFlourishCard>()
+        ];
+    }
+}
+
+public sealed class ArchitectPet : BossCompanionPet<Architect>
+{
+    protected override float PetScale => 0.30f;
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class RustcladRelic : BossCompanionRelic<RustcladPet>
+{
+    protected override string CompanionName => "Rustclad";
+    protected override string RelicIconFileName => "relic_rustclad.png";
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class BuffUpCard : BossCompanionCard<RustcladPet>
+{
+    private static readonly Random DialogueRng = new();
+
+    private static readonly LocString[] ArchitectLines =
+    [
+        new("ancients", "THE_ARCHITECT.talk.IRONCLAD.0-1r.char"),
+        new("ancients", "THE_ARCHITECT.talk.IRONCLAD.1-1r.char"),
+        new("ancients", "THE_ARCHITECT.talk.IRONCLAD.2-1r.char")
+    ];
+
+    protected override string CompanionName => "Rustclad";
+    protected override string CardTitle => "Buff Up";
+    protected override string CardArtFileName => "card_rustclad.png";
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new HpLossVar(3m),
+        new PowerVar<RustcladBuffUpPower>(5m)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.FromPower<StrengthPower>(),
+        HoverTipFactory.FromPower<RustcladBuffUpPower>()
+    ];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Lose {HpLoss} HP. Gain {RustcladBuffUpPower:diff} temporary Strength."),
+        ("flavor", "Old rage in smaller armor.")
+    ];
+
+    public BuffUpCard()
+        : base(0, CardType.Skill, TargetType.Self)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        Creature? rustclad = Owner.PlayerCombatState?.GetPet<RustcladPet>();
+        if (rustclad != null && !rustclad.IsDead)
+        {
+            TalkCmd.Play(GetRandomArchitectLine(), rustclad, VfxColor.Red, VfxDuration.Long);
+            await CreatureCmd.TriggerAnim(rustclad, "PowerUp", 0.25f);
+        }
+
+        await CreatureCmd.Damage(
+            choiceContext,
+            Owner.Creature,
+            DynamicVars.HpLoss.BaseValue,
+            ValueProp.Unblockable | ValueProp.Unpowered | ValueProp.Move,
+            Owner.Creature,
+            this);
+
+        await PowerCmd.Apply<RustcladBuffUpPower>(
+            choiceContext,
+            Owner.Creature,
+            DynamicVars["RustcladBuffUpPower"].BaseValue,
+            Owner.Creature,
+            this);
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars["RustcladBuffUpPower"].UpgradeValueBy(2m);
+    }
+
+    private static LocString GetRandomArchitectLine()
+    {
+        return ArchitectLines[DialogueRng.Next(ArchitectLines.Length)];
+    }
+}
+
+public sealed class RustcladBuffUpPower : TemporaryStrengthPower, ICustomModel
+{
+    public override AbstractModel OriginModel => ModelDb.Card<BuffUpCard>();
+}
+
+public sealed class RustcladPet : CustomMonsterModel
+{
+    private const float PetScale = 0.70f;
+    private const float RustcladHueShift = 0.55f;
+
+    public override int MinInitialHp => 9999;
+
+    public override int MaxInitialHp => 9999;
+
+    public override bool IsHealthBarVisible => false;
+
+    public override NCreatureVisuals? CreateCustomVisuals()
+    {
+        NCreatureVisuals visuals = ModelDb.Character<Ironclad>().CreateVisuals();
+        visuals.SetScaleAndHue(PetScale, RustcladHueShift);
+        visuals.CallDeferred(NCreatureVisuals.MethodName.SetScaleAndHue, PetScale, RustcladHueShift);
+        return CompanionDrag.MakeDraggable(visuals);
+    }
+
+    public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(
+        MegaCrit.Sts2.Core.Bindings.MegaSpine.MegaSprite controller)
+    {
+        return ModelDb.Character<Ironclad>().GenerateAnimator(controller);
+    }
+
+    protected override MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterMoveStateMachine GenerateMoveStateMachine()
+    {
+        List<MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterState> states = [];
+        MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MoveState idle =
+            new("NOTHING_MOVE", (IReadOnlyList<Creature> _) => Task.CompletedTask);
+
+        idle.FollowUpState = idle;
+        states.Add(idle);
+
+        return new MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterMoveStateMachine(states, idle);
+    }
+
+}
+
+public abstract class CharacterCompanionPet<TCharacter> : CustomMonsterModel
+    where TCharacter : CharacterModel
+{
+    protected abstract float PetScale { get; }
+    protected abstract float HueShift { get; }
+    protected virtual Color Tint => Colors.White;
+
+    public override int MinInitialHp => 9999;
+    public override int MaxInitialHp => 9999;
+    public override bool IsHealthBarVisible => false;
+
+    public override NCreatureVisuals? CreateCustomVisuals()
+    {
+        NCreatureVisuals visuals = ModelDb.Character<TCharacter>().CreateVisuals();
+        visuals.SetScaleAndHue(PetScale, HueShift);
+        visuals.Modulate = Tint;
+        visuals.CallDeferred(NCreatureVisuals.MethodName.SetScaleAndHue, PetScale, HueShift);
+
+        return CompanionDrag.MakeDraggable(visuals);
+    }
+
+    public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(
+        MegaCrit.Sts2.Core.Bindings.MegaSpine.MegaSprite controller)
+    {
+        return ModelDb.Character<TCharacter>().GenerateAnimator(controller);
+    }
+
+    protected override MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterMoveStateMachine GenerateMoveStateMachine()
+    {
+        List<MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterState> states = [];
+        MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MoveState idle =
+            new("NOTHING_MOVE", (IReadOnlyList<Creature> _) => Task.CompletedTask);
+
+        idle.FollowUpState = idle;
+        states.Add(idle);
+
+        return new MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterMoveStateMachine(states, idle);
+    }
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class ShadeleafRelic : BossCompanionRelic<ShadeleafPet>
+{
+    protected override string CompanionName => "Shadeleaf";
+    protected override string RelicIconFileName => "relic_shadeleaf.png";
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class NeedleTossCard : BossCompanionCard<ShadeleafPet>
+{
+    private static readonly LocString[] Lines =
+    [
+        new(NeowCompanions.NeowCompanionsCode.Patches.NeowCompanionText.Table, "SHADELEAF.dialogue.0"),
+        new(NeowCompanions.NeowCompanionsCode.Patches.NeowCompanionText.Table, "SHADELEAF.dialogue.1"),
+        new(NeowCompanions.NeowCompanionsCode.Patches.NeowCompanionText.Table, "SHADELEAF.dialogue.2")
+    ];
+
+    protected override string CompanionName => "Shadeleaf";
+    protected override string CardTitle => "Poisoned Shiv";
+    protected override string CardArtFileName => "card_shadeleaf.png";
+
+    protected override HashSet<CardTag> CanonicalTags => [CardTag.Shiv];
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DamageVar(4m, DamageProps.card),
+        new PowerVar<PoisonPower>(2m)
+    ];
+
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.FromPower<PoisonPower>()
+    ];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Deal {Damage:diff} damage. Apply {PoisonPower:diff} Poison."),
+        ("flavor", "A whisper, a glint, then venom.")
+    ];
+
+    public NeedleTossCard()
+        : base(0, CardType.Attack, TargetType.AnyEnemy)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
+        await CharacterCompanionDialogue.SayRandom<ShadeleafPet>(Owner, Lines, VfxColor.Swamp);
+        await TriggerPetAnimation<ShadeleafPet>("Shiv", 0.15f);
+        await DamageCmd.Attack(DynamicVars.Damage.BaseValue)
+            .FromCard(this)
+            .Targeting(cardPlay.Target)
+            .WithHitVfxNode(target => NShivThrowVfx.Create(Owner.Creature, target, Colors.Green))
+            .Execute(choiceContext);
+        await PowerCmd.Apply<PoisonPower>(choiceContext, cardPlay.Target, DynamicVars["PoisonPower"].BaseValue, Owner.Creature, this);
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Damage.UpgradeValueBy(2m);
+        DynamicVars["PoisonPower"].UpgradeValueBy(1m);
+    }
+}
+
+public sealed class ShadeleafPet : CharacterCompanionPet<Silent>
+{
+    protected override float PetScale => 0.70f;
+    protected override float HueShift => 0.72f;
+    protected override Color Tint => new(0.95f, 0.84f, 1.0f, 1.0f);
+}
+
+internal static partial class CompanionSelectivePalette
+{
+    public const string ShadeleafShader = """
+shader_type canvas_item;
+void fragment() {
+    vec4 c = texture(TEXTURE, UV) * COLOR;
+    float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+    float maxc = max(c.r, max(c.g, c.b));
+    float minc = min(c.r, min(c.g, c.b));
+    float sat = maxc - minc;
+
+    float green_cloth = smoothstep(-0.02, 0.07, min(c.g, c.b) - c.r)
+        * (1.0 - smoothstep(0.50, 0.74, lum));
+    float cyan_blade = smoothstep(0.04, 0.20, min(c.g, c.b) - c.r)
+        * smoothstep(0.42, 0.78, lum)
+        * smoothstep(0.06, 0.24, sat);
+
+    vec3 purple_shadow = vec3(0.15, 0.08, 0.25);
+    vec3 purple_mid = vec3(0.43, 0.20, 0.62);
+    vec3 purple_high = vec3(0.72, 0.48, 0.95);
+    vec3 purple = mix(purple_shadow, purple_mid, smoothstep(0.15, 0.62, lum));
+    purple = mix(purple, purple_high, smoothstep(0.58, 0.92, lum));
+
+    vec3 gold_shadow = vec3(0.55, 0.32, 0.06);
+    vec3 gold_high = vec3(1.00, 0.78, 0.20);
+    vec3 gold = mix(gold_shadow, gold_high, smoothstep(0.25, 0.86, lum));
+
+    vec3 rgb = mix(c.rgb, purple, green_cloth * 0.96);
+    rgb = mix(rgb, gold, cyan_blade * 0.94);
+    COLOR = vec4(rgb, c.a);
+}
+""";
+
+    public const string RustcladShader = """
+shader_type canvas_item;
+void fragment() {
+    vec4 tex = texture(TEXTURE, UV);
+    float lum = dot(tex.rgb, vec3(0.299, 0.587, 0.114));
+    float maxc = max(tex.r, max(tex.g, tex.b));
+    float minc = min(tex.r, min(tex.g, tex.b));
+    float sat = maxc - minc;
+
+    float yellow_armor = smoothstep(0.18, 0.40, lum)
+        * smoothstep(0.10, 0.28, tex.r)
+        * smoothstep(0.08, 0.24, tex.g)
+        * (1.0 - smoothstep(0.36, 0.66, tex.b))
+        * smoothstep(0.28, 0.68, tex.g / max(tex.r, 0.001))
+        * smoothstep(0.00, 0.12, tex.r - tex.b);
+    float dark_underlayer = (1.0 - smoothstep(0.22, 0.42, lum))
+        * smoothstep(0.02, 0.20, tex.r - tex.g)
+        * (1.0 - smoothstep(0.44, 0.74, tex.g / max(tex.r, 0.001)))
+        * (1.0 - yellow_armor);
+    float pale_sword = smoothstep(0.55, 0.86, lum)
+        * (1.0 - smoothstep(0.00, 0.16, sat));
+
+    vec3 black_armor = mix(vec3(0.18, 0.19, 0.20), vec3(0.68, 0.69, 0.72), smoothstep(0.14, 0.76, lum));
+    vec3 crimson = mix(vec3(0.16, 0.00, 0.01), vec3(0.50, 0.03, 0.035), smoothstep(0.06, 0.48, lum));
+    vec3 cold_sword = mix(vec3(0.22, 0.42, 0.58), vec3(0.86, 0.97, 1.00), smoothstep(0.28, 0.92, lum));
+
+    vec3 rgb = mix(tex.rgb, black_armor, yellow_armor);
+    rgb = mix(rgb, crimson, dark_underlayer);
+    rgb = mix(rgb, cold_sword, pale_sword * 0.78);
+    COLOR = vec4(rgb * COLOR.rgb, tex.a * COLOR.a);
+}
+""";
+
+    public const string OperosisShader = """
+shader_type canvas_item;
+void fragment() {
+    vec4 c = texture(TEXTURE, UV) * COLOR;
+    float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+    float maxc = max(c.r, max(c.g, c.b));
+    float minc = min(c.r, min(c.g, c.b));
+    float sat = maxc - minc;
+
+    float cyan_shell = smoothstep(0.04, 0.20, min(c.g, c.b) - c.r)
+        * smoothstep(0.12, 0.42, lum)
+        * smoothstep(0.05, 0.24, sat);
+    float blue_glow = smoothstep(0.05, 0.22, c.b - c.r)
+        * smoothstep(-0.05, 0.14, c.b - c.g)
+        * smoothstep(0.16, 0.58, lum)
+        * smoothstep(0.06, 0.24, sat);
+
+    vec3 orange_shadow = vec3(0.42, 0.05, 0.02);
+    vec3 orange_mid = vec3(0.90, 0.24, 0.04);
+    vec3 orange_high = vec3(1.00, 0.60, 0.14);
+    vec3 orange = mix(orange_shadow, orange_mid, smoothstep(0.10, 0.58, lum));
+    orange = mix(orange, orange_high, smoothstep(0.56, 0.92, lum));
+
+    vec3 hot_shadow = vec3(0.50, 0.00, 0.02);
+    vec3 hot_mid = vec3(1.00, 0.12, 0.03);
+    vec3 hot_high = vec3(1.00, 0.78, 0.20);
+    vec3 hot = mix(hot_shadow, hot_mid, smoothstep(0.12, 0.62, lum));
+    hot = mix(hot, hot_high, smoothstep(0.58, 0.95, lum));
+
+    vec3 rgb = mix(c.rgb, orange, cyan_shell * 0.96);
+    rgb = mix(rgb, hot, blue_glow * 0.88);
+    COLOR = vec4(rgb, c.a);
+}
+""";
+
+    public const string BonebinderShader = """
+shader_type canvas_item;
+void fragment() {
+    vec4 c = texture(TEXTURE, UV) * COLOR;
+    float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+    float maxc = max(c.r, max(c.g, c.b));
+    float minc = min(c.r, min(c.g, c.b));
+    float sat = maxc - minc;
+
+    float blue_flame = smoothstep(0.10, 0.28, c.b - c.r)
+        * smoothstep(0.02, 0.18, c.g - c.r)
+        * smoothstep(0.24, 0.62, lum)
+        * smoothstep(0.10, 0.32, sat);
+    float robe = smoothstep(0.04, 0.22, c.r - c.g)
+        * smoothstep(-0.04, 0.12, c.b - c.g)
+        * (1.0 - smoothstep(0.70, 0.90, lum))
+        * smoothstep(0.10, 0.34, sat);
+
+    vec3 pink_shadow = vec3(0.54, 0.08, 0.42);
+    vec3 pink_hot = vec3(1.00, 0.36, 0.82);
+    vec3 pink_core = vec3(1.00, 0.72, 0.94);
+    vec3 pink = mix(pink_shadow, pink_hot, smoothstep(0.18, 0.68, lum));
+    pink = mix(pink, pink_core, smoothstep(0.62, 0.96, lum));
+
+    vec3 green_shadow = vec3(0.11, 0.24, 0.08);
+    vec3 green_mid = vec3(0.33, 0.66, 0.18);
+    vec3 green_high = vec3(0.76, 0.95, 0.44);
+    vec3 green = mix(green_shadow, green_mid, smoothstep(0.08, 0.58, lum));
+    green = mix(green, green_high, smoothstep(0.56, 0.88, lum));
+
+    vec3 rgb = mix(c.rgb, green, robe * 0.92);
+    rgb = mix(rgb, pink, blue_flame * 0.98);
+    COLOR = vec4(rgb, c.a);
+}
+""";
+
+    public static void ApplyShader(Node node, string shaderCode)
+    {
+        ShaderMaterial material = CreateSpineShaderMaterial(shaderCode);
+        if (node is NCreatureVisuals visuals && visuals.SpineBody != null)
+        {
+            visuals.SpineBody.SetNormalMaterial(material);
+            MainFile.Logger.Info($"[NeowCompanions] Applied custom Spine material to {visuals.Name}; current={visuals.SpineBody.GetNormalMaterial()?.GetType().Name ?? "null"}.");
+            visuals.AddChild(new DelayedSpineMaterialApplier(shaderCode));
+            return;
+        }
+        if (node is NCreatureVisuals pendingVisuals)
+        {
+            MainFile.Logger.Info($"[NeowCompanions] Queued custom Spine material for {pendingVisuals.Name}; SpineBody not ready.");
+            pendingVisuals.AddChild(new DelayedSpineMaterialApplier(shaderCode));
+            return;
+        }
+
+        ApplyMaterialRecursive(node, material);
+    }
+
+    private static ShaderMaterial CreateSpineShaderMaterial(string shaderCode)
+    {
+        try
+        {
+            ShaderMaterial material = (ShaderMaterial)PreloadManager.Cache.GetMaterial("res://materials/vfx/hsv.tres").Duplicate();
+            material.Shader = new Shader { Code = shaderCode };
+            return material;
+        }
+        catch (Exception ex)
+        {
+            MainFile.Logger.Error("[NeowCompanions] Could not duplicate built-in HSV material for custom palette: " + ex);
+            return new ShaderMaterial { Shader = new Shader { Code = shaderCode } };
+        }
+    }
+
+    private static void ApplyMaterialRecursive(Node node, ShaderMaterial material)
+    {
+        if (node is CanvasItem canvasItem)
+        {
+            canvasItem.Material = material;
+        }
+
+        foreach (Node child in node.GetChildren())
+        {
+            ApplyMaterialRecursive(child, material);
+        }
+    }
+
+    private sealed partial class DelayedSpineMaterialApplier : Node
+    {
+        private readonly string shaderCode;
+        private ShaderMaterial? material;
+        private int framesWaited;
+
+        public DelayedSpineMaterialApplier(string shaderCode)
+        {
+            this.shaderCode = shaderCode;
+        }
+
+        public override void _Process(double delta)
+        {
+            framesWaited++;
+            if (framesWaited < 2 || GetParent() is not NCreatureVisuals visuals)
+            {
+                return;
+            }
+
+            if (visuals.SpineBody == null)
+            {
+                if (framesWaited > 300)
+                {
+                    QueueFree();
+                }
+                return;
+            }
+
+            material ??= CreateSpineShaderMaterial(shaderCode);
+            visuals.SpineBody.SetNormalMaterial(material);
+            if (framesWaited is 2 or 30 or 120 or 300)
+            {
+                Material? current = visuals.SpineBody.GetNormalMaterial();
+                MainFile.Logger.Info($"[NeowCompanions] Reapplied custom Spine material to {visuals.Name}; frame={framesWaited}; same={ReferenceEquals(current, material)}; current={current?.GetType().Name ?? "null"}.");
+            }
+            if (framesWaited > 300)
+            {
+                QueueFree();
+            }
+        }
+    }
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class GlitchlingRelic : BossCompanionRelic<GlitchlingPet>
+{
+    protected override string CompanionName => "Glitchling";
+    protected override string RelicIconFileName => "relic_glitchling.png";
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class OverclockCard : BossCompanionCard<GlitchlingPet>
+{
+    private static readonly LocString[] Lines =
+    [
+        new("ancients", "THE_ARCHITECT.talk.DEFECT.0-1r.char"),
+        new("ancients", "THE_ARCHITECT.talk.DEFECT.1-1r.char"),
+        new("ancients", "THE_ARCHITECT.talk.DEFECT.2-1r.char")
+    ];
+
+    protected override string CompanionName => "Glitchling";
+    protected override string CardTitle => "Orbital Glitch";
+    protected override string CardArtFileName => "card_glitchling.png";
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DynamicVar("Orb", 1m)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.FromPower<GlitchlingOrbitPower>()
+    ];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Channel {Orb:diff} random Orb. Every other turn, Evoke your rightmost Orb at the end of your turn."),
+        ("flavor", "It hums one impossible note too high.")
+    ];
+
+    public OverclockCard()
+        : base(1, CardType.Power, TargetType.Self)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        await CharacterCompanionDialogue.SayRandom<GlitchlingPet>(Owner, Lines, VfxColor.Blue);
+        await TriggerPetAnimation<GlitchlingPet>("PowerUp", 0.5f);
+        await GlitchlingOrbitPower.ChannelRandomOrbs(choiceContext, Owner, DynamicVars["Orb"].IntValue);
+        await PowerCmd.Apply<GlitchlingOrbitPower>(choiceContext, Owner.Creature, 1m, Owner.Creature, this);
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars["Orb"].UpgradeValueBy(1m);
+    }
+}
+
+public sealed class GlitchlingOrbitPower : CustomPowerModel
+{
+    private int turnsElapsed;
+
+    public override PowerType Type => PowerType.Buff;
+
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", "Orbital Glitch"),
+        ("description", "Every other turn, Evoke your rightmost Orb at the end of your turn.")
+    ];
+
+    public override async Task AfterSideTurnEnd(
+        PlayerChoiceContext choiceContext,
+        MegaCrit.Sts2.Core.Combat.CombatSide side,
+        IEnumerable<Creature> creatures)
+    {
+        if (!creatures.Contains(Owner) || Owner.Player == null)
+        {
+            return;
+        }
+
+        turnsElapsed++;
+        if (turnsElapsed % 2 != 0)
+        {
+            return;
+        }
+
+        Flash();
+        await OrbCmd.EvokeLast(choiceContext, Owner.Player);
+    }
+
+    public static async Task ChannelRandomOrbs(
+        PlayerChoiceContext choiceContext,
+        MegaCrit.Sts2.Core.Entities.Players.Player owner,
+        int count)
+    {
+        List<OrbModel> options =
+        [
+            ModelDb.Orb<LightningOrb>(),
+            ModelDb.Orb<FrostOrb>(),
+            ModelDb.Orb<DarkOrb>(),
+            ModelDb.Orb<PlasmaOrb>()
+        ];
+
+        for (int i = 0; i < count; i++)
+        {
+            OrbModel? orb = owner.RunState.Rng.CombatCardGeneration.NextItem(options);
+            if (orb == null)
+            {
+                continue;
+            }
+
+            await OrbCmd.Channel(choiceContext, orb.ToMutable(), owner);
+        }
+    }
+}
+
+public sealed class GlitchlingPet : CharacterCompanionPet<Defect>
+{
+    protected override float PetScale => 0.34f;
+    protected override float HueShift => -0.18f;
+    protected override Color Tint => new(1.12f, 0.88f, 0.56f, 1.0f);
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class BonebinderRelic : BossCompanionRelic<BonebinderPet>
+{
+    protected override string CompanionName => "Bonebinder";
+    protected override string RelicIconFileName => "relic_bonebinder.png";
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class GraveCallCard : BossCompanionCard<BonebinderPet>
+{
+    private static readonly LocString[] Lines =
+    [
+        new("ancients", "THE_ARCHITECT.talk.NECROBINDER.0-0.char"),
+        new("ancients", "THE_ARCHITECT.talk.NECROBINDER.1-0r.char"),
+        new("ancients", "THE_ARCHITECT.talk.NECROBINDER.2-0r.char"),
+        new("ancients", "THE_ARCHITECT.talk.NECROBINDER.3-0r.char"),
+        new("ancients", "THE_ARCHITECT.talk.NECROBINDER.3-2r.char")
+    ];
+
+    protected override string CompanionName => "Bonebinder";
+    protected override string CardTitle => "Doombind";
+    protected override string CardArtFileName => "card_bonebinder.png";
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new PowerVar<BonebinderDoombindPower>(1m)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.FromPower<DoomPower>(),
+        HoverTipFactory.FromPower<BonebinderDoombindPower>()
+    ];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Your next {BonebinderDoombindPower:diff} Attack applies Doom equal to unblocked damage dealt."),
+        ("flavor", "A tiny hand knocks from the other side.")
+    ];
+
+    public GraveCallCard()
+        : base(1, CardType.Skill, TargetType.Self)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        await CharacterCompanionDialogue.SayRandom<BonebinderPet>(Owner, Lines, VfxColor.Purple);
+        await TriggerPetAnimation<BonebinderPet>("summonTrigger", 0.4f);
+        await PowerCmd.Apply<BonebinderDoombindPower>(choiceContext, Owner.Creature, DynamicVars["BonebinderDoombindPower"].BaseValue, Owner.Creature, this);
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars["BonebinderDoombindPower"].UpgradeValueBy(1m);
+    }
+}
+
+public sealed class BonebinderDoombindPower : CustomPowerModel
+{
+    public override PowerType Type => PowerType.Buff;
+
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", "Doombind"),
+        ("description", "Your next {Amount} Attack applies Doom equal to unblocked damage dealt.")
+    ];
+
+    public override async Task AfterDamageReceived(
+        PlayerChoiceContext choiceContext,
+        Creature target,
+        DamageResult result,
+        ValueProp props,
+        Creature? source,
+        CardModel? cardSource)
+    {
+        if (source != Owner || cardSource == null || cardSource.Type != CardType.Attack || target.Side == Owner.Side)
+        {
+            return;
+        }
+
+        Flash();
+        if (result.UnblockedDamage > 0)
+        {
+            await PowerCmd.Apply<DoomPower>(choiceContext, target, result.UnblockedDamage, Owner, null);
+        }
+
+        if (Amount <= 1)
+        {
+            await PowerCmd.Remove(this);
+        }
+        else
+        {
+            await PowerCmd.ModifyAmount(choiceContext, this, -1m, Owner, null);
+        }
+    }
+}
+
+public sealed class BonebinderPet : CharacterCompanionPet<Necrobinder>
+{
+    protected override float PetScale => 0.50f;
+    protected override float HueShift => 0.0f;
+
+    public override NCreatureVisuals? CreateCustomVisuals()
+    {
+        NCreatureVisuals? visuals = base.CreateCustomVisuals();
+        if (visuals != null)
+        {
+            CompanionSelectivePalette.ApplyShader(visuals, CompanionSelectivePalette.BonebinderShader);
+            visuals.AddChild(new BonebinderFlamePigmentApplier());
+        }
+
+        if (visuals == null)
+        {
+            return null;
+        }
+
+        return CompanionDrag.MakeDraggable(visuals);
+    }
+}
+
+internal sealed partial class BonebinderFlamePigmentApplier : Node
+{
+    private int framesWaited;
+    private bool loggedDiagnostics;
+    private bool loggedFlameMaterial;
+
+    public override void _Process(double delta)
+    {
+        framesWaited++;
+
+        if (GetParent() is not NCreatureVisuals visuals || visuals.SpineBody == null)
+        {
+            if (framesWaited > 300)
+            {
+                QueueFree();
+            }
+            return;
+        }
+
+        MegaSkeleton? skeleton = visuals.SpineBody.GetSkeleton();
+        if (skeleton == null)
+        {
+            if (framesWaited > 300)
+            {
+                QueueFree();
+            }
+            return;
+        }
+
+        int flameSprites = TintFlameSprites(visuals);
+        int tintedSlots = 0;
+
+        if (!loggedDiagnostics && framesWaited is 2 or 30)
+        {
+            loggedDiagnostics = true;
+            MainFile.Logger.Info($"[NeowCompanions] Bonebinder pigment pass: flameSprites={flameSprites}; tintedSlots={tintedSlots}; skeletonMethods={InterestingMethods(skeleton.BoundObject)}.");
+            MainFile.Logger.Info(DumpInterestingTree(visuals, 0, 5));
+        }
+
+        if (framesWaited > 300)
+        {
+            QueueFree();
+        }
+    }
+
+    private static T? FindNodeRecursive<T>(Node node, string name)
+        where T : Node
+    {
+        if (node.Name == name && node is T typedNode)
+        {
+            return typedNode;
+        }
+
+        foreach (Node child in node.GetChildren())
+        {
+            T? found = FindNodeRecursive<T>(child, name);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    private int TintFlameSprites(NCreatureVisuals visuals)
+    {
+        Node2D? headNode = FindNodeRecursive<Node2D>(visuals, "HeadBoneNode");
+        if (headNode == null)
+        {
+            return 0;
+        }
+
+        return TintFlameSprites(headNode);
+    }
+
+    private int TintFlameSprites(Node node)
+    {
+        int count = 0;
+        TintFlameSprites(node, ref count);
+        return count;
+    }
+
+    private void TintFlameSprites(Node node, ref int count)
+    {
+        string name = node.Name.ToString();
+        bool likelyFlame = name.Contains("SteppedFire", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("fire", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("flame", StringComparison.OrdinalIgnoreCase);
+
+        if (node is Sprite2D sprite && likelyFlame)
+        {
+            if (!loggedFlameMaterial)
+            {
+                loggedFlameMaterial = true;
+                MainFile.Logger.Info(DescribeFlameSprite(sprite));
+            }
+
+            ApplyOriginalFlameMaterialColors(sprite);
+            sprite.Modulate = Colors.White;
+            sprite.SelfModulate = Colors.White;
+            sprite.UseParentMaterial = false;
+            count++;
+        }
+
+        foreach (Node child in node.GetChildren())
+        {
+            TintFlameSprites(child, ref count);
+        }
+    }
+
+    private static void ApplyOriginalFlameMaterialColors(Sprite2D sprite)
+    {
+        if (sprite.Material is not ShaderMaterial shaderMaterial)
+        {
+            return;
+        }
+
+        if (shaderMaterial.ResourceLocalToScene)
+        {
+            shaderMaterial.SetShaderParameter("OuterColor", new Color(1.0f, 0.12f, 0.62f, 1.0f));
+            shaderMaterial.SetShaderParameter("InnerColor", new Color(0.16f, 0.0f, 0.10f, 1.0f));
+            return;
+        }
+
+        ShaderMaterial localMaterial = (ShaderMaterial)shaderMaterial.Duplicate();
+        localMaterial.ResourceLocalToScene = true;
+        localMaterial.SetShaderParameter("OuterColor", new Color(1.0f, 0.12f, 0.62f, 1.0f));
+        localMaterial.SetShaderParameter("InnerColor", new Color(0.16f, 0.0f, 0.10f, 1.0f));
+        sprite.Material = localMaterial;
+    }
+
+    private static string DescribeFlameSprite(Sprite2D sprite)
+    {
+        StringBuilder builder = new();
+        builder.Append("[NeowCompanions] Bonebinder flame sprite ");
+        builder.Append(sprite.GetPath());
+        builder.Append("; texture=");
+        builder.Append(sprite.Texture?.ResourcePath ?? "<null>");
+        builder.Append("; material=");
+        builder.Append(sprite.Material?.GetType().Name ?? "<null>");
+        builder.Append("; materialPath=");
+        builder.Append(sprite.Material?.ResourcePath ?? "<null>");
+
+        if (sprite.Material is ShaderMaterial shaderMaterial)
+        {
+            Shader? shader = shaderMaterial.Shader;
+            builder.Append("; shaderPath=");
+            builder.Append(shader?.ResourcePath ?? "<null>");
+
+            try
+            {
+                if (shader != null)
+                {
+                    builder.Append("; uniforms=");
+                    List<string> uniforms = [];
+                    foreach (Godot.Collections.Dictionary uniform in shader.GetShaderUniformList())
+                    {
+                        string uniformName = uniform.TryGetValue("name", out Variant uniformNameVariant)
+                            ? uniformNameVariant.AsString()
+                            : "<unnamed>";
+                        Variant value = shaderMaterial.GetShaderParameter(uniformName);
+                        uniforms.Add($"{uniformName}={value}");
+                    }
+                    builder.Append(string.Join(", ", uniforms));
+                }
+            }
+            catch (Exception ex)
+            {
+                builder.Append("; uniformError=");
+                builder.Append(ex.GetType().Name);
+                builder.Append(": ");
+                builder.Append(ex.Message);
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private static int TryTintSpineSlots(MegaSkeleton skeleton)
+    {
+        GodotObject skeletonObject = skeleton.BoundObject;
+        if (!skeletonObject.HasMethod("get_slots"))
+        {
+            return 0;
+        }
+
+        int tinted = 0;
+        Variant slotsVariant = skeletonObject.Call("get_slots");
+        foreach (Variant slotVariant in slotsVariant.AsGodotArray())
+        {
+            GodotObject? slot = slotVariant.AsGodotObject();
+            if (slot == null)
+            {
+                continue;
+            }
+
+            string slotName = GetSpineObjectName(slot);
+            bool likelyFlame = slotName.Contains("head", StringComparison.OrdinalIgnoreCase)
+                || slotName.Contains("hair", StringComparison.OrdinalIgnoreCase)
+                || slotName.Contains("fire", StringComparison.OrdinalIgnoreCase)
+                || slotName.Contains("flame", StringComparison.OrdinalIgnoreCase)
+                || slotName.Contains("blue", StringComparison.OrdinalIgnoreCase);
+
+            bool blueColor = false;
+            if (slot.HasMethod("get_color"))
+            {
+                Color color = slot.Call("get_color").As<Color>();
+                blueColor = color.B > color.R + 0.15f && color.B > color.G + 0.05f;
+            }
+
+            if ((likelyFlame || blueColor) && slot.HasMethod("set_color"))
+            {
+                slot.Call("set_color", new Color(1.0f, 0.10f, 0.62f, 1.0f));
+                tinted++;
+            }
+        }
+
+        return tinted;
+    }
+
+    private static string GetSpineObjectName(GodotObject spineObject)
+    {
+        if (spineObject.HasMethod("get_name"))
+        {
+            return spineObject.Call("get_name").AsString();
+        }
+
+        if (spineObject.HasMethod("get_data"))
+        {
+            GodotObject? data = spineObject.Call("get_data").AsGodotObject();
+            if (data != null && data.HasMethod("get_name"))
+            {
+                return data.Call("get_name").AsString();
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string InterestingMethods(GodotObject obj)
+    {
+        List<string> names = [];
+        foreach (Godot.Collections.Dictionary method in obj.GetMethodList())
+        {
+            string name = method["name"].AsString();
+            if (name.Contains("slot", StringComparison.OrdinalIgnoreCase)
+                || name.Contains("material", StringComparison.OrdinalIgnoreCase)
+                || name.Contains("color", StringComparison.OrdinalIgnoreCase)
+                || name.Contains("attachment", StringComparison.OrdinalIgnoreCase)
+                || name.Contains("skin", StringComparison.OrdinalIgnoreCase))
+            {
+                names.Add(name);
+            }
+        }
+
+        return names.Count == 0 ? "<none>" : string.Join(", ", names.Distinct().OrderBy(name => name));
+    }
+
+    private static string DumpInterestingTree(Node node, int depth, int maxDepth)
+    {
+        StringBuilder builder = new();
+        DumpInterestingTree(node, depth, maxDepth, builder);
+        return builder.ToString();
+    }
+
+    private static void DumpInterestingTree(Node node, int depth, int maxDepth, StringBuilder builder)
+    {
+        if (depth > maxDepth)
+        {
+            return;
+        }
+
+        string name = node.Name.ToString();
+        bool interesting = depth <= 1
+            || name.Contains("head", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("fire", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("flame", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("vfx", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("bone", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("spine", StringComparison.OrdinalIgnoreCase)
+            || node.GetClass() == "SpineSlotNode";
+
+        if (interesting)
+        {
+            builder.Append(' ', depth * 2);
+            builder.Append("[NeowCompanions] Bonebinder node ");
+            builder.Append(node.GetPath());
+            builder.Append(" :: ");
+            builder.Append(node.GetType().Name);
+            builder.Append(" class=");
+            builder.Append(node.GetClass());
+            builder.AppendLine();
+        }
+
+        foreach (Node child in node.GetChildren())
+        {
+            DumpInterestingTree(child, depth + 1, maxDepth, builder);
+        }
+    }
+}
+
+internal sealed partial class BonebinderPinkFlameOverlay : Node2D
+{
+    public const string NodeName = "NeowCompanionsPinkFlame";
+
+    public Node2D? Target { get; set; }
+
+    private float time;
+
+    public override void _Process(double delta)
+    {
+        time += (float)delta;
+        if (Target == null || !IsInstanceValid(Target))
+        {
+            QueueFree();
+            return;
+        }
+
+        GlobalPosition = Target.GlobalPosition + new Vector2(27.0f, 2.0f);
+        GlobalRotation = 0.0f;
+        GlobalScale = new Vector2(1.25f, 1.25f);
+        QueueRedraw();
+    }
+
+    public override void _Draw()
+    {
+        float sway = MathF.Sin(time * 7.5f) * 2.0f;
+        float pulse = 1.0f + MathF.Sin(time * 11.0f) * 0.06f;
+
+        DrawColoredPolygon(
+            [
+                new Vector2(-12.0f * pulse, 7.0f),
+                new Vector2(-6.0f + sway, -13.0f),
+                new Vector2(0.0f - sway, -34.0f),
+                new Vector2(6.0f + sway, -12.0f),
+                new Vector2(12.0f * pulse, 7.0f)
+            ],
+            new Color(0.82f, 0.0f, 0.45f, 1.0f));
+
+        DrawColoredPolygon(
+            [
+                new Vector2(-7.5f * pulse, 4.0f),
+                new Vector2(-1.5f - sway, -12.0f),
+                new Vector2(3.5f + sway, -28.0f),
+                new Vector2(7.5f * pulse, 4.0f)
+            ],
+            new Color(1.0f, 0.12f, 0.74f, 0.96f));
+
+        DrawColoredPolygon(
+            [
+                new Vector2(-3.0f, 0.0f),
+                new Vector2(1.5f + sway, -18.0f),
+                new Vector2(4.0f, 0.0f)
+            ],
+            new Color(1.0f, 0.66f, 0.95f, 0.88f));
+
+        DrawCircle(new Vector2(0.0f, 1.0f), 10.0f * pulse, new Color(1.0f, 0.03f, 0.56f, 0.9f));
+        DrawCircle(new Vector2(0.5f + sway * 0.2f, -8.5f), 6.5f * pulse, new Color(1.0f, 0.45f, 0.9f, 0.72f));
+    }
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class GildedPageRelic : BossCompanionRelic<GildedPagePet>
+{
+    protected override string CompanionName => "Gilded Page";
+    protected override string RelicIconFileName => "relic_gilded_page.png";
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class CommandingFlourishCard : BossCompanionCard<GildedPagePet>
+{
+    private static readonly LocString[] Lines =
+    [
+        new("ancients", "THE_ARCHITECT.talk.REGENT.0-0.char"),
+        new("ancients", "THE_ARCHITECT.talk.REGENT.0-2.char"),
+        new("ancients", "THE_ARCHITECT.talk.REGENT.1-0r.char"),
+        new("ancients", "THE_ARCHITECT.talk.REGENT.1-2r.char"),
+        new("ancients", "THE_ARCHITECT.talk.REGENT.2-0r.char"),
+        new("ancients", "THE_ARCHITECT.talk.REGENT.2-2r.char")
+    ];
+
+    protected override string CompanionName => "Gilded Page";
+    protected override string CardTitle => "Royal Draft";
+    protected override string CardArtFileName => "card_gilded_page.png";
+
+    public override bool HasStarCostX => true;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new IfUpgradedVar("IfUpgraded", 0m)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Generate a random non-colorless card from another character X times.{IfUpgraded:show: They are Upgraded.|}"),
+        ("flavor", "A very small decree, delivered with enormous confidence.")
+    ];
+
+    public CommandingFlourishCard()
+        : base(0, CardType.Skill, TargetType.Self)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        await CharacterCompanionDialogue.SayRandom<GildedPagePet>(Owner, Lines, VfxColor.Orange);
+        await TriggerPetAnimation<GildedPagePet>("sovereignBladeTrigger", 0.25f);
+        int count = ResolveStarXValue();
+        if (count <= 0 || CombatState == null)
+        {
+            return;
+        }
+
+        List<CardModel> options = GetDraftOptions().ToList();
+        if (options.Count == 0)
+        {
+            MainFile.Logger.Info("Royal Draft could not find any valid character cards to generate.");
+            return;
+        }
+
+        List<CardModel> generatedCards = [];
+        for (int i = 0; i < count; i++)
+        {
+            CardModel? randomCard = Owner.RunState.Rng.CombatCardGeneration.NextItem(options);
+            if (randomCard == null)
+            {
+                continue;
+            }
+
+            CardModel generatedCard = CombatState.CreateCard(randomCard, Owner);
+            if (IsUpgraded)
+            {
+                CardCmd.Upgrade(generatedCard);
+            }
+
+            generatedCards.Add(generatedCard);
+        }
+
+        await CardPileCmd.AddGeneratedCardsToCombat(generatedCards, PileType.Hand, Owner);
+    }
+
+    private IEnumerable<CardModel> GetDraftOptions()
+    {
+        CardMultiplayerConstraint runConstraint = Owner.RunState.CardMultiplayerConstraint;
+
+        return ModelDb.AllCards
+            .Where(card => card.CanBeGeneratedInCombat && card.ShouldShowInCardLibrary)
+            .Where(card => !card.Pool.IsColorless)
+            .Where(card => IsAllowedForCurrentRun(card, runConstraint));
+    }
+
+    private static bool IsAllowedForCurrentRun(CardModel card, CardMultiplayerConstraint runConstraint)
+    {
+        return runConstraint switch
+        {
+            CardMultiplayerConstraint.MultiplayerOnly => card.MultiplayerConstraint != CardMultiplayerConstraint.SingleplayerOnly,
+            CardMultiplayerConstraint.SingleplayerOnly => card.MultiplayerConstraint != CardMultiplayerConstraint.MultiplayerOnly,
+            _ => card.MultiplayerConstraint != CardMultiplayerConstraint.MultiplayerOnly
+        };
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars["IfUpgraded"].UpgradeValueBy(0m);
+    }
+}
+
+public sealed class GildedPagePet : CharacterCompanionPet<Regent>
+{
+    protected override float PetScale => 0.68f;
+    protected override float HueShift => 0.36f;
+}
+
+internal static class CharacterCompanionDialogue
+{
+    private static readonly Random Rng = new();
+
+    public static Task SayRandom<TPet>(MegaCrit.Sts2.Core.Entities.Players.Player owner, IReadOnlyList<LocString> lines, VfxColor color)
+        where TPet : MonsterModel
+    {
+        Creature? pet = owner.PlayerCombatState?.GetPet<TPet>();
+        if (pet == null || pet.IsDead || lines.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        TalkCmd.Play(lines[Rng.Next(lines.Count)], pet, color, VfxDuration.Long);
+        return Task.CompletedTask;
     }
 }
 
@@ -1088,6 +2590,8 @@ public sealed class TestSubjectLastTurnDamagePower : CustomPowerModel
 
 internal static class CompanionAnimation
 {
+    private static readonly HashSet<Creature> SuppressedAttackAnimationPets = [];
+
     private const float InsatiableDevourScaleMultiplier = 7.0f;
     private const float InsatiableDevourGrowDuration = 0.76f;
     private const float InsatiableDevourEatDuration = 3.10f;
@@ -1095,6 +2599,71 @@ internal static class CompanionAnimation
     private const float InsatiableDevourPostEatHoldDuration = 0.36f;
     private const float InsatiableDevourRestoreDuration = 1.30f;
     private const int InsatiableDevourFrontZIndex = 1000;
+
+    public static async Task TriggerAttackForActiveCompanions(MegaCrit.Sts2.Core.Entities.Players.Player owner)
+    {
+        if (owner.PlayerCombatState == null)
+        {
+            return;
+        }
+
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<SoulFyshPipPet>(), "Attack", "AttackDebuffTrigger");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<WrigglerPet>(), "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<CeremonialBeastPet>(), "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<KinFollowerPet>(), "SlashTrigger", "BoomerangTrigger", "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<EyeWithTeethPet>(), "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<GremlinMercPet>(), "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<ThievingHopperPet>(), "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<AeonglassPet>(), "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<LagavulinMatriarchPet>(), "AttackHeavy", "AttackDouble");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<TheKinPet>(), "ThrowBomb", "Bomb", "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<WaterfallGiantPet>(), "Attack", "AttackKick", "AttackStomp");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<VantomPet>(), "Attack", "Dismember", "Extend1", "Extend2", "Extend3");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<KnowledgeDemonPet>(), "Slap", "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<TheInsatiablePet>(), "LungingBite", "Thrash", "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<QueenPet>(), "ArmsAttack", "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<TestSubjectPet>(), "Slash", "Bite", "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<SeapunkPet>(), "Kick", "MultiAttack", "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<ShrinkerBeetlePet>(), "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<OperosisPet>(), "Attack", "Cast");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<ArchitectPet>(), "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<RustcladPet>(), "heavyAttack", "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<ShadeleafPet>(), "Shiv", "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<GlitchlingPet>(), "Attack");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<BonebinderPet>(), "Attack", "Cast");
+        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<GildedPagePet>(), "sovereignBladeTrigger", "Attack");
+    }
+
+    private static async Task TryTriggerPetAttack(Creature? pet, params string[] animationNames)
+    {
+        if (pet == null || pet.IsDead || SuppressedAttackAnimationPets.Contains(pet))
+        {
+            return;
+        }
+
+        await TryTriggerAnimation(pet, 0.2f, animationNames);
+    }
+
+    public static bool IsAttackAnimationSuppressed(Creature pet)
+    {
+        return SuppressedAttackAnimationPets.Contains(pet);
+    }
+
+    public static void SuppressAttackAnimations(Creature pet)
+    {
+        SuppressedAttackAnimationPets.Add(pet);
+    }
+
+    public static async Task TriggerLagavulinMatriarchWake(Creature matriarch)
+    {
+        SfxCmd.Play(LagavulinMatriarch.awakenSfx);
+        NCreature? matriarchNode = matriarch.GetCreatureNode();
+        matriarchNode?.SpineAnimation.SetAnimation("_tracks/eyes_open", loop: false, 1);
+        matriarchNode?.SpineAnimation.AddAnimation("_tracks/eyes_open_loop", 0f, loop: true, 1);
+
+        await TryTriggerAnimation(matriarch, 0.6f, LagavulinMatriarch.wakeTrigger);
+        await TryTriggerAnimation(matriarch, 0.25f, "AttackHeavy", "AttackDouble");
+    }
 
     public static Task TryTriggerAnimation(Creature creature, params string[] animationNames)
     {
@@ -1280,3 +2849,4 @@ internal static class CompanionAnimation
         }
     }
 }
+

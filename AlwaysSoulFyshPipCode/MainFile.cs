@@ -4,7 +4,7 @@ using Godot;
 using HarmonyLib;
 using NeowCompanions.NeowCompanionsCode.Config;
 using MegaCrit.Sts2.Core.Modding;
-using MegaCrit.Sts2.Core.Models.Events;
+using MegaCrit.Sts2.Core.Models;
 
 namespace NeowCompanions.NeowCompanionsCode;
 
@@ -23,28 +23,34 @@ public partial class MainFile : Node
 
         Harmony harmony = new("AlexAllen.NeowCompanions");
 
-        MethodInfo? target = AccessTools.Method(typeof(Neow), "GenerateInitialOptions");
+        MethodInfo? target = AccessTools.Method(typeof(AncientEventModel), "GenerateInitialOptionsWrapper");
         MethodInfo? postfix = AccessTools.Method(
             typeof(Patches.NeowCompanionChoicePatch),
             nameof(Patches.NeowCompanionChoicePatch.Postfix));
 
-        Logger.Info("[NeowCompanions] Neow target found: " + (target != null));
-        GD.Print("[NeowCompanions] Neow target found: " + (target != null));
+        Logger.Info("[NeowCompanions] Ancient options wrapper target found: " + (target != null));
+        GD.Print("[NeowCompanions] Ancient options wrapper target found: " + (target != null));
 
         Logger.Info("[NeowCompanions] Postfix found: " + (postfix != null));
         GD.Print("[NeowCompanions] Postfix found: " + (postfix != null));
 
         if (target != null && postfix != null)
         {
-            harmony.Patch(target, postfix: new HarmonyMethod(postfix));
+            HarmonyMethod companionPostfix = new(postfix)
+            {
+                priority = Priority.Last,
+                after = ["AncientAffection.harmony"]
+            };
 
-            Logger.Info("[NeowCompanions] Manual Neow patch applied.");
-            GD.Print("[NeowCompanions] Manual Neow patch applied.");
+            harmony.Patch(target, postfix: companionPostfix);
+
+            Logger.Info("[NeowCompanions] Manual ancient options wrapper patch applied.");
+            GD.Print("[NeowCompanions] Manual ancient options wrapper patch applied.");
         }
         else
         {
-            Logger.Error("[NeowCompanions] Could not apply manual Neow patch.");
-            GD.PrintErr("[NeowCompanions] Could not apply manual Neow patch.");
+            Logger.Error("[NeowCompanions] Could not apply manual ancient options wrapper patch.");
+            GD.PrintErr("[NeowCompanions] Could not apply manual ancient options wrapper patch.");
         }
 
         // This picks up NeowCompanionTextPatch, but not NeowCompanionChoicePatch

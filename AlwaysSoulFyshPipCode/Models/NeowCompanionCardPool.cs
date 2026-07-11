@@ -38,7 +38,13 @@ public sealed class NeowCompanionCardPool : CustomCardPoolModel
             ModelDb.Card<TestSubjectCard>(),
             ModelDb.Card<SeapunkCard>(),
             ModelDb.Card<ShrinkerBeetleCard>(),
-            ModelDb.Card<OperosisCard>()
+            ModelDb.Card<OperosisCard>(),
+            ModelDb.Card<ArchitectCard>(),
+            ModelDb.Card<BuffUpCard>(),
+            ModelDb.Card<NeedleTossCard>(),
+            ModelDb.Card<OverclockCard>(),
+            ModelDb.Card<GraveCallCard>(),
+            ModelDb.Card<CommandingFlourishCard>()
         ];
     }
 }

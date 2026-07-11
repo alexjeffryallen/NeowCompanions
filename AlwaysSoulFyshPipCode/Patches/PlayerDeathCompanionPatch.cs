@@ -36,6 +36,12 @@ public static class PlayerDeathCompanionPatch
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SeapunkPet>(), "Seapunk");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<ShrinkerBeetlePet>(), "Shrinker Beetle");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<OperosisPet>(), "Operosis");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<ArchitectPet>(), "The Architect");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<RustcladPet>(), "Rustclad");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<ShadeleafPet>(), "Shadeleaf");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<GlitchlingPet>(), "Glitchling");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<BonebinderPet>(), "Bonebinder");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<GildedPagePet>(), "Gilded Page");
     }
 
     private static void TriggerDeathAnimation(Creature? pet, string companionName)

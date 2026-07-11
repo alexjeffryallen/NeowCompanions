@@ -22,7 +22,13 @@ public enum CompanionKind
     TestSubject,
     Seapunk,
     ShrinkerBeetle,
-    Operosis
+    Operosis,
+    Architect,
+    Rustclad,
+    Shadeleaf,
+    Glitchling,
+    Bonebinder,
+    GildedPage
 }
 
 public static class CompanionState

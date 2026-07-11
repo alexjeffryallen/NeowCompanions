@@ -1,11 +1,18 @@
-Choose a companion after Neow's starting relic.
+﻿Choose a companion after Neow's starting relic.
 
 Neow Companions adds a growing pool of companion relics based on Slay the Spire 2 creatures and bosses. Each companion has a combat pet, relic icon, custom card, card art, and themed animation triggers.
 
 Current companion pool:
-Byrdpip, Soul Fysh Pip, Wriggler, Ceremonial Beast, Kin Follower, Eye With Teeth, Gremlin Merc, Thieving Hopper, Aeonglass, Lagavulin Matriarch, The Kin, Waterfall Giant, Vantom, Knowledge Demon, The Insatiable, Queen, Test Subject, Seapunk, Shrinker Beetle, and Operosis.
+Byrdpip, Soul Fysh Pip, Wriggler, Ceremonial Beast, Kin Follower, Eye With Teeth, Gremlin Merc, Thieving Hopper, Aeonglass, Lagavulin Matriarch, The Kin, Waterfall Giant, Vantom, Knowledge Demon, The Insatiable, Queen, Test Subject, Seapunk, Shrinker Beetle, Operosis, The Architect, Rustclad, Shadeleaf, Glitchling, Bonebinder, and Gilded Page.
 
 Recent highlights:
+- Added right-click dragging for companion pets so you can reposition them during combat.
+- Added proper icons for custom companion powers instead of the base missing "NOPE" icon.
+- Tuned Ceremonial Beast animation behavior: Ceremonial Toll uses its charge, while normal player attacks use the regular attack animation.
+- Added Shadeleaf, Glitchling, Bonebinder, and Gilded Page companions with character-based hue swaps, dialogue barks, cards, relic art, and card art.
+- Added Rustclad companion with Buff Up, a 0-cost skill that costs HP and grants temporary Strength.
+- Added The Architect companion with a Grand Design card that generates random companion cards.
+- Added screenshot-based Architect relic and card art from the real in-game Architect model.
 - Added Seapunk, Shrinker Beetle, and Operosis companions.
 - Added new companion card and relic art, including updated art for Seapunk, Shrinker Beetle, and Operosis.
 - Added mod settings for showing all companion choices, granting a random companion with no choices, and disabling companion card grants.
@@ -16,3 +23,4 @@ Recent highlights:
 - Fixed Hopper Jab/Thieving Hopper permanent deck reward behavior.
 
 Requires BaseLib.
+

@@ -75,6 +75,28 @@ public static class NeowCompanionText
             "OPEROSIS.title" => "Operosis",
             "OPEROSIS.description" => "Gain Operosis as your companion.",
 
+            "ARCHITECT.title" => "The Architect",
+            "ARCHITECT.description" => "Gain The Architect as your companion.",
+
+            "RUSTCLAD.title" => "Rustclad",
+            "RUSTCLAD.description" => "Gain Rustclad as your companion.",
+
+            "SHADELEAF.title" => "Shadeleaf",
+            "SHADELEAF.description" => "Gain Shadeleaf as your companion.",
+
+            "GLITCHLING.title" => "Glitchling",
+            "GLITCHLING.description" => "Gain Glitchling as your companion.",
+
+            "BONEBINDER.title" => "Bonebinder",
+            "BONEBINDER.description" => "Gain Bonebinder as your companion.",
+
+            "GILDED_PAGE.title" => "Gilded Page",
+            "GILDED_PAGE.description" => "Gain Gilded Page as your companion.",
+
+            "SHADELEAF.dialogue.0" => "...",
+            "SHADELEAF.dialogue.1" => "Too slow.",
+            "SHADELEAF.dialogue.2" => "Watch closely.",
+
             _ => key
         };
     }
