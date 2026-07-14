@@ -28,7 +28,11 @@ public enum CompanionKind
     Shadeleaf,
     Glitchling,
     Bonebinder,
-    GildedPage
+    GildedPage,
+    EmberPip,
+    FrostPip,
+    StormPip,
+    ThornPip
 }
 
 public static class CompanionState

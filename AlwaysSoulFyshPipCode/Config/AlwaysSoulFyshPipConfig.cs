@@ -29,4 +29,16 @@ public sealed class NeowCompanionsConfig : SimpleModConfig
         get => ModSettings.GrantCompanionCards;
         set => ModSettings.GrantCompanionCards = value;
     }
+
+    public static bool OfferCompanionsAtEveryAncient
+    {
+        get => ModSettings.OfferCompanionsAtEveryAncient;
+        set => ModSettings.OfferCompanionsAtEveryAncient = value;
+    }
+
+    public static bool ChooseMultipleCompanionsAtAncient
+    {
+        get => ModSettings.ChooseMultipleCompanionsAtAncient;
+        set => ModSettings.ChooseMultipleCompanionsAtAncient = value;
+    }
 }

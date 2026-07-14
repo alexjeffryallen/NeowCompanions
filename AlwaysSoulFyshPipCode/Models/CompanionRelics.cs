@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
@@ -86,7 +88,19 @@ public abstract class CompanionRelicModel : RelicModel, ICustomModel, ILocalizat
             return Task.CompletedTask;
         }
 
-        return CompanionAnimation.TriggerAttackForActiveCompanions(Owner);
+        if (IsNeowCompanionCard(cardPlay.Card) || Owner.Relics.OfType<CompanionRelicModel>().FirstOrDefault() != this)
+        {
+            return Task.CompletedTask;
+        }
+
+        return CompanionAnimation.TriggerRandomAttackForActiveCompanion(Owner);
+    }
+
+    private static bool IsNeowCompanionCard(CardModel card)
+    {
+        Type cardType = card.GetType();
+        return cardType.Assembly == typeof(CompanionRelicModel).Assembly
+            && cardType.Namespace == typeof(CompanionRelicModel).Namespace;
     }
 }
 

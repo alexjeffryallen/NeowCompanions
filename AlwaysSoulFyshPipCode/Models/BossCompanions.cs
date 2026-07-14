@@ -1469,6 +1469,45 @@ public sealed class ShadeleafPet : CharacterCompanionPet<Silent>
 
 internal static partial class CompanionSelectivePalette
 {
+    public const string EmberPipShader = """
+shader_type canvas_item;
+void fragment() {
+    vec4 c = texture(TEXTURE, UV) * COLOR;
+    float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+    float maxc = max(c.r, max(c.g, c.b));
+    float minc = min(c.r, min(c.g, c.b));
+    float sat = maxc - minc;
+
+    float warm_feathers = smoothstep(0.06, 0.24, c.r - c.b)
+        * smoothstep(0.00, 0.18, c.g - c.b)
+        * smoothstep(0.10, 0.36, sat)
+        * smoothstep(0.32, 0.78, lum);
+    float green_body = smoothstep(0.02, 0.18, c.g - c.r)
+        * smoothstep(0.00, 0.16, c.g - c.b)
+        * smoothstep(0.08, 0.32, sat);
+    float pale_highlights = smoothstep(0.56, 0.88, lum)
+        * smoothstep(0.02, 0.24, sat);
+
+    vec3 ember_red_shadow = vec3(0.42, 0.00, 0.01);
+    vec3 ember_red_mid = vec3(0.86, 0.03, 0.02);
+    vec3 ember_red_hot = vec3(1.00, 0.30, 0.08);
+    vec3 ember_red = mix(ember_red_shadow, ember_red_mid, smoothstep(0.24, 0.62, lum));
+    ember_red = mix(ember_red, ember_red_hot, smoothstep(0.62, 0.94, lum));
+
+    vec3 black_low = vec3(0.025, 0.018, 0.018);
+    vec3 black_mid = vec3(0.13, 0.075, 0.070);
+    vec3 black_high = vec3(0.30, 0.08, 0.07);
+    vec3 ember_black = mix(black_low, black_mid, smoothstep(0.10, 0.50, lum));
+    ember_black = mix(ember_black, black_high, smoothstep(0.54, 0.92, lum));
+
+    vec3 rgb = c.rgb;
+    rgb = mix(rgb, ember_black, green_body * 0.98);
+    rgb = mix(rgb, ember_red, warm_feathers * 0.98);
+    rgb = mix(rgb, ember_red_hot, pale_highlights * green_body * 0.48);
+    COLOR = vec4(rgb, c.a);
+}
+""";
+
     public const string ShadeleafShader = """
 shader_type canvas_item;
 void fragment() {
@@ -2310,6 +2349,19 @@ public sealed class GildedPageRelic : BossCompanionRelic<GildedPagePet>
 {
     protected override string CompanionName => "Gilded Page";
     protected override string RelicIconFileName => "relic_gilded_page.png";
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CompanionName),
+        ("description", $"At the start of each combat, summon {CompanionName} and gain 1 Star."),
+        ("flavor", "Neow keeps stranger company than usual.")
+    ];
+
+    public override async Task BeforeCombatStart()
+    {
+        await base.BeforeCombatStart();
+        await PlayerCmd.GainStars(1, Owner);
+    }
 }
 
 [Pool(typeof(NeowCompanionCardPool))]
@@ -2418,6 +2470,318 @@ public sealed class GildedPagePet : CharacterCompanionPet<Regent>
 {
     protected override float PetScale => 0.68f;
     protected override float HueShift => 0.36f;
+}
+
+public abstract class ElementalByrdpipPet : CustomMonsterModel
+{
+    protected abstract float HueShift { get; }
+    protected abstract Color Tint { get; }
+    protected abstract string SkinName { get; }
+    protected virtual string? PaletteShader => null;
+
+    public override int MinInitialHp => 9999;
+    public override int MaxInitialHp => 9999;
+    public override bool IsHealthBarVisible => false;
+
+    public override NCreatureVisuals? CreateCustomVisuals()
+    {
+        NCreatureVisuals visuals = ModelDb.Monster<MegaCrit.Sts2.Core.Models.Monsters.Byrdpip>().CreateVisuals();
+        visuals.SetScaleAndHue(0.72f, HueShift);
+        visuals.Scale = new Vector2(-0.72f, 0.72f);
+        visuals.Modulate = Tint;
+        visuals.CallDeferred(NCreatureVisuals.MethodName.SetScaleAndHue, 0.72f, HueShift);
+        if (PaletteShader is { } paletteShader)
+        {
+            CompanionSelectivePalette.ApplyShader(visuals, paletteShader);
+        }
+
+        return CompanionDrag.MakeDraggable(visuals);
+    }
+
+    public override void SetupSkins(MegaSprite spine, MegaSkeleton skeleton)
+    {
+        MegaSkeletonDataResource data = skeleton.GetData();
+        skeleton.SetSkin(data.FindSkin(SkinName));
+        skeleton.SetSlotsToSetupPose();
+    }
+
+    public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(MegaSprite controller)
+    {
+        return ModelDb.Monster<MegaCrit.Sts2.Core.Models.Monsters.Byrdpip>().GenerateAnimator(controller);
+    }
+
+    protected override MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterMoveStateMachine GenerateMoveStateMachine()
+    {
+        List<MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterState> states = [];
+        MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MoveState idle =
+            new("NOTHING_MOVE", (IReadOnlyList<Creature> _) => Task.CompletedTask);
+
+        idle.FollowUpState = idle;
+        states.Add(idle);
+
+        return new MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterMoveStateMachine(states, idle);
+    }
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class EmberPipRelic : BossCompanionRelic<EmberPipPet>
+{
+    protected override string CompanionName => "Ember Pip";
+    protected override string RelicIconFileName => "relic_ember_pip.png";
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class EmberPipCard : BossCompanionCard<EmberPipPet>
+{
+    protected override string CompanionName => "Ember Pip";
+    protected override string CardTitle => "Ember Swoop";
+    protected override string CardArtFileName => "card_ember_pip.png";
+
+    public override Texture2D? CustomPortrait => ModelDb.Card<ByrdSwoop>().Portrait;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new SingleEnemyAwareDamageVar(8m, DamageProps.card),
+        new PowerVar<VulnerablePower>(1m)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<VulnerablePower>()];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Deal {Damage:diff} damage. Apply {VulnerablePower:diff} Vulnerable."),
+        ("flavor", "A little spark with total confidence.")
+    ];
+
+    public EmberPipCard()
+        : base(1, CardType.Attack, TargetType.AnyEnemy)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
+        await TriggerPetAnimation<EmberPipPet>("Attack", 0.35f);
+        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this);
+        await PowerCmd.Apply<VulnerablePower>(choiceContext, cardPlay.Target, DynamicVars.Vulnerable.BaseValue, Owner.Creature, this);
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Damage.UpgradeValueBy(3m);
+    }
+}
+
+public sealed class EmberPipPet : ElementalByrdpipPet
+{
+    protected override float HueShift => 0.0f;
+    protected override Color Tint => Colors.White;
+    protected override string SkinName => "version1";
+    protected override string? PaletteShader => CompanionSelectivePalette.EmberPipShader;
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class FrostPipRelic : BossCompanionRelic<FrostPipPet>
+{
+    protected override string CompanionName => "Frost Pip";
+    protected override string RelicIconFileName => "relic_frost_pip.png";
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class FrostPipCard : BossCompanionCard<FrostPipPet>
+{
+    protected override string CompanionName => "Frost Pip";
+    protected override string CardTitle => "Frost Flutter";
+    protected override string CardArtFileName => "card_frost_pip.png";
+
+    public override Texture2D? CustomPortrait => ModelDb.Card<ByrdSwoop>().Portrait;
+
+    public override bool GainsBlock => true;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new SelfAwareBlockVar(7m, ValueProp.Move),
+        new PowerVar<WeakPower>(1m)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<WeakPower>()];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Gain {Block:diff} Block. Apply {WeakPower:diff} Weak to ALL enemies."),
+        ("flavor", "The smallest chill can still find the spine.")
+    ];
+
+    public FrostPipCard()
+        : base(1, CardType.Skill, TargetType.AllEnemies)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        if (CombatState == null)
+        {
+            return;
+        }
+
+        await TriggerPetAnimation<FrostPipPet>("Attack", 0.35f);
+        await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, cardPlay, false);
+        await PowerCmd.Apply<WeakPower>(
+            choiceContext,
+            CombatState.HittableEnemies.Where(enemy => enemy.IsAlive),
+            DynamicVars.Weak.BaseValue,
+            Owner.Creature,
+            this);
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Block.UpgradeValueBy(3m);
+    }
+}
+
+public sealed class FrostPipPet : ElementalByrdpipPet
+{
+    protected override float HueShift => 0.52f;
+    protected override Color Tint => new(0.62f, 1.05f, 1.22f, 1.0f);
+    protected override string SkinName => "version3";
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class StormPipRelic : BossCompanionRelic<StormPipPet>
+{
+    protected override string CompanionName => "Storm Pip";
+    protected override string RelicIconFileName => "relic_storm_pip.png";
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class StormPipCard : BossCompanionCard<StormPipPet>
+{
+    protected override string CompanionName => "Storm Pip";
+    protected override string CardTitle => "Static Dive";
+    protected override string CardArtFileName => "card_storm_pip.png";
+
+    public override Texture2D? CustomPortrait => ModelDb.Card<ByrdSwoop>().Portrait;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DamageVar(4m, DamageProps.card),
+        new RepeatVar(2)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Deal {Damage:diff} damage to ALL enemies {Repeat:diff} times."),
+        ("flavor", "Tiny wings. Bad weather.")
+    ];
+
+    public StormPipCard()
+        : base(1, CardType.Attack, TargetType.AllEnemies)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        if (CombatState == null)
+        {
+            return;
+        }
+
+        await TriggerPetAnimation<StormPipPet>("Attack", 0.25f);
+        List<Creature> enemies = CombatState.HittableEnemies.Where(enemy => enemy.IsAlive).ToList();
+        for (int i = 0; i < DynamicVars.Repeat.IntValue; i++)
+        {
+            await CreatureCmd.Damage(choiceContext, enemies, DynamicVars.Damage, Owner.Creature, this);
+        }
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Repeat.UpgradeValueBy(1m);
+    }
+}
+
+public sealed class StormPipPet : ElementalByrdpipPet
+{
+    protected override float HueShift => 0.66f;
+    protected override Color Tint => new(0.88f, 0.76f, 1.28f, 1.0f);
+    protected override string SkinName => "version4";
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class ThornPipRelic : BossCompanionRelic<ThornPipPet>
+{
+    protected override string CompanionName => "Thorn Pip";
+    protected override string RelicIconFileName => "relic_thorn_pip.png";
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class ThornPipCard : BossCompanionCard<ThornPipPet>
+{
+    protected override string CompanionName => "Thorn Pip";
+    protected override string CardTitle => "Briar Chirp";
+    protected override string CardArtFileName => "card_thorn_pip.png";
+
+    public override Texture2D? CustomPortrait => ModelDb.Card<ByrdSwoop>().Portrait;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new PowerVar<PoisonPower>(4m),
+        new DynamicVar("Thorns", 2m)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.FromPower<PoisonPower>(),
+        HoverTipFactory.FromPower<ThornsPower>()
+    ];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "Apply {PoisonPower:diff} Poison to ALL enemies. Gain {Thorns:diff} Thorns."),
+        ("flavor", "Adorable, in the way a bramble is adorable.")
+    ];
+
+    public ThornPipCard()
+        : base(1, CardType.Skill, TargetType.AllEnemies)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        if (CombatState == null)
+        {
+            return;
+        }
+
+        await TriggerPetAnimation<ThornPipPet>("Attack", 0.35f);
+        await PowerCmd.Apply<PoisonPower>(
+            choiceContext,
+            CombatState.HittableEnemies.Where(enemy => enemy.IsAlive),
+            DynamicVars.Poison.BaseValue,
+            Owner.Creature,
+            this);
+        await PowerCmd.Apply<ThornsPower>(choiceContext, Owner.Creature, DynamicVars["Thorns"].BaseValue, Owner.Creature, this);
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Poison.UpgradeValueBy(2m);
+        DynamicVars["Thorns"].UpgradeValueBy(1m);
+    }
+}
+
+public sealed class ThornPipPet : ElementalByrdpipPet
+{
+    protected override float HueShift => 0.30f;
+    protected override Color Tint => new(0.62f, 1.12f, 0.58f, 1.0f);
+    protected override string SkinName => "version2";
 }
 
 internal static class CharacterCompanionDialogue
@@ -2592,6 +2956,8 @@ internal static class CompanionAnimation
 {
     private static readonly HashSet<Creature> SuppressedAttackAnimationPets = [];
 
+    private sealed record AttackAnimationCandidate(Creature Pet, string[] AnimationNames);
+
     private const float InsatiableDevourScaleMultiplier = 7.0f;
     private const float InsatiableDevourGrowDuration = 0.76f;
     private const float InsatiableDevourEatDuration = 3.10f;
@@ -2600,38 +2966,64 @@ internal static class CompanionAnimation
     private const float InsatiableDevourRestoreDuration = 1.30f;
     private const int InsatiableDevourFrontZIndex = 1000;
 
-    public static async Task TriggerAttackForActiveCompanions(MegaCrit.Sts2.Core.Entities.Players.Player owner)
+    public static async Task TriggerRandomAttackForActiveCompanion(MegaCrit.Sts2.Core.Entities.Players.Player owner)
     {
         if (owner.PlayerCombatState == null)
         {
             return;
         }
 
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<SoulFyshPipPet>(), "Attack", "AttackDebuffTrigger");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<WrigglerPet>(), "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<CeremonialBeastPet>(), "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<KinFollowerPet>(), "SlashTrigger", "BoomerangTrigger", "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<EyeWithTeethPet>(), "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<GremlinMercPet>(), "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<ThievingHopperPet>(), "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<AeonglassPet>(), "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<LagavulinMatriarchPet>(), "AttackHeavy", "AttackDouble");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<TheKinPet>(), "ThrowBomb", "Bomb", "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<WaterfallGiantPet>(), "Attack", "AttackKick", "AttackStomp");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<VantomPet>(), "Attack", "Dismember", "Extend1", "Extend2", "Extend3");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<KnowledgeDemonPet>(), "Slap", "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<TheInsatiablePet>(), "LungingBite", "Thrash", "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<QueenPet>(), "ArmsAttack", "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<TestSubjectPet>(), "Slash", "Bite", "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<SeapunkPet>(), "Kick", "MultiAttack", "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<ShrinkerBeetlePet>(), "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<OperosisPet>(), "Attack", "Cast");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<ArchitectPet>(), "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<RustcladPet>(), "heavyAttack", "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<ShadeleafPet>(), "Shiv", "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<GlitchlingPet>(), "Attack");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<BonebinderPet>(), "Attack", "Cast");
-        await TryTriggerPetAttack(owner.PlayerCombatState.GetPet<GildedPagePet>(), "sovereignBladeTrigger", "Attack");
+        List<AttackAnimationCandidate> candidates =
+        [
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<SoulFyshPipPet>(), "Attack", "AttackDebuffTrigger"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<WrigglerPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<CeremonialBeastPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<KinFollowerPet>(), "SlashTrigger", "BoomerangTrigger", "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<EyeWithTeethPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<GremlinMercPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<ThievingHopperPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<AeonglassPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<LagavulinMatriarchPet>(), "AttackHeavy", "AttackDouble"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<TheKinPet>(), "ThrowBomb", "Bomb", "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<WaterfallGiantPet>(), "Attack", "AttackKick", "AttackStomp"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<VantomPet>(), "Attack", "Dismember", "Extend1", "Extend2", "Extend3"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<KnowledgeDemonPet>(), "Slap", "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<TheInsatiablePet>(), "LungingBite", "Thrash", "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<QueenPet>(), "ArmsAttack", "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<TestSubjectPet>(), "Slash", "Bite", "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<SeapunkPet>(), "Kick", "MultiAttack", "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<ShrinkerBeetlePet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<OperosisPet>(), "Attack", "Cast"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<ArchitectPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<RustcladPet>(), "heavyAttack", "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<ShadeleafPet>(), "Shiv", "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<GlitchlingPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<BonebinderPet>(), "Attack", "Cast"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<GildedPagePet>(), "sovereignBladeTrigger", "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<EmberPipPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<FrostPipPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<StormPipPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<ThornPipPet>(), "Attack")
+        ];
+
+        candidates = candidates
+            .Where(candidate => candidate.Pet != null
+                && !candidate.Pet.IsDead
+                && !SuppressedAttackAnimationPets.Contains(candidate.Pet))
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        AttackAnimationCandidate candidate = owner.RunState.Rng.CombatTargets.NextItem(candidates) ?? candidates[0];
+        await TryTriggerAnimation(candidate.Pet, 0.2f, candidate.AnimationNames);
+    }
+
+    private static AttackAnimationCandidate CreateAttackCandidate(Creature? pet, params string[] animationNames)
+    {
+        return new AttackAnimationCandidate(pet!, animationNames);
     }
 
     private static async Task TryTriggerPetAttack(Creature? pet, params string[] animationNames)

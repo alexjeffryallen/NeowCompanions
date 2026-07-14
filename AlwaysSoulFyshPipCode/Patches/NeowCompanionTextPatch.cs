@@ -93,6 +93,18 @@ public static class NeowCompanionText
             "GILDED_PAGE.title" => "Gilded Page",
             "GILDED_PAGE.description" => "Gain Gilded Page as your companion.",
 
+            "EMBER_PIP.title" => "Ember Pip",
+            "EMBER_PIP.description" => "Gain Ember Pip as your companion.",
+
+            "FROST_PIP.title" => "Frost Pip",
+            "FROST_PIP.description" => "Gain Frost Pip as your companion.",
+
+            "STORM_PIP.title" => "Storm Pip",
+            "STORM_PIP.description" => "Gain Storm Pip as your companion.",
+
+            "THORN_PIP.title" => "Thorn Pip",
+            "THORN_PIP.description" => "Gain Thorn Pip as your companion.",
+
             "SHADELEAF.dialogue.0" => "...",
             "SHADELEAF.dialogue.1" => "Too slow.",
             "SHADELEAF.dialogue.2" => "Watch closely.",
@@ -126,6 +138,22 @@ public static class NeowCompanionText
             text = normalizedKey.EndsWith(".HOVER.DESC")
                 ? "When disabled, companion choices grant only the companion relic and pet, without adding the companion card to your deck."
                 : "Grant companion cards";
+            return true;
+        }
+
+        if (normalizedKey.Contains("OFFER_COMPANIONS_AT_EVERY_ANCIENT"))
+        {
+            text = normalizedKey.EndsWith(".HOVER.DESC")
+                ? "When enabled, every Ancient encounter can grant a new companion, allowing several companions in one run."
+                : "Companions at every Ancient";
+            return true;
+        }
+
+        if (normalizedKey.Contains("CHOOSE_MULTIPLE_COMPANIONS_AT_ANCIENT"))
+        {
+            text = normalizedKey.EndsWith(".HOVER.DESC")
+                ? "When enabled, companion choice screens stay open after each pick so you can take as many available companions as you want."
+                : "Choose multiple companions";
             return true;
         }
 

@@ -44,7 +44,11 @@ public sealed class NeowCompanionCardPool : CustomCardPoolModel
             ModelDb.Card<NeedleTossCard>(),
             ModelDb.Card<OverclockCard>(),
             ModelDb.Card<GraveCallCard>(),
-            ModelDb.Card<CommandingFlourishCard>()
+            ModelDb.Card<CommandingFlourishCard>(),
+            ModelDb.Card<EmberPipCard>(),
+            ModelDb.Card<FrostPipCard>(),
+            ModelDb.Card<StormPipCard>(),
+            ModelDb.Card<ThornPipCard>()
         ];
     }
 }
