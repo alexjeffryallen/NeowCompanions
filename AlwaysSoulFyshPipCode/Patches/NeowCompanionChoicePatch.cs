@@ -24,7 +24,6 @@ namespace NeowCompanions.NeowCompanionsCode.Patches;
 
 public static class NeowCompanionChoicePatch
 {
-    private const int CompanionPageSize = 6;
 
     private static readonly FieldInfo? EventOptionOnChosenField =
         AccessTools.Field(typeof(EventOption), "<OnChosen>k__BackingField");
@@ -85,6 +84,19 @@ public static class NeowCompanionChoicePatch
             CompanionKind.FrostPip => "FROST_PIP.title",
             CompanionKind.StormPip => "STORM_PIP.title",
             CompanionKind.ThornPip => "THORN_PIP.title",
+            CompanionKind.KaiserCrab => "KAISER_CRAB.title",
+            CompanionKind.BygoneEffigy => "BYGONE_EFFIGY.title",
+            CompanionKind.Byrdonis => "BYRDONIS.title",
+            CompanionKind.PhrogParasite => "PHROG_PARASITE.title",
+            CompanionKind.SkulkingColony => "SKULKING_COLONY.title",
+            CompanionKind.PhantasmalGardener => "PHANTASMAL_GARDENER.title",
+            CompanionKind.TerrorEel => "TERROR_EEL.title",
+            CompanionKind.Decimillipede => "DECIMILLIPEDE.title",
+            CompanionKind.Entomancer => "ENTOMANCER.title",
+            CompanionKind.InfestedPrism => "INFESTED_PRISM.title",
+            CompanionKind.KnightGang => "KNIGHT_GANG.title",
+            CompanionKind.MechaKnight => "MECHA_KNIGHT.title",
+            CompanionKind.SoulNexus => "SOUL_NEXUS.title",
             _ => "CHOOSE_COMPANION.title"
         };
 
@@ -120,6 +132,19 @@ public static class NeowCompanionChoicePatch
             CompanionKind.FrostPip => "FROST_PIP.description",
             CompanionKind.StormPip => "STORM_PIP.description",
             CompanionKind.ThornPip => "THORN_PIP.description",
+            CompanionKind.KaiserCrab => "KAISER_CRAB.description",
+            CompanionKind.BygoneEffigy => "BYGONE_EFFIGY.description",
+            CompanionKind.Byrdonis => "BYRDONIS.description",
+            CompanionKind.PhrogParasite => "PHROG_PARASITE.description",
+            CompanionKind.SkulkingColony => "SKULKING_COLONY.description",
+            CompanionKind.PhantasmalGardener => "PHANTASMAL_GARDENER.description",
+            CompanionKind.TerrorEel => "TERROR_EEL.description",
+            CompanionKind.Decimillipede => "DECIMILLIPEDE.description",
+            CompanionKind.Entomancer => "ENTOMANCER.description",
+            CompanionKind.InfestedPrism => "INFESTED_PRISM.description",
+            CompanionKind.KnightGang => "KNIGHT_GANG.description",
+            CompanionKind.MechaKnight => "MECHA_KNIGHT.description",
+            CompanionKind.SoulNexus => "SOUL_NEXUS.description",
             _ => "CHOOSE_COMPANION.description"
         };
     }
@@ -155,8 +180,97 @@ public static class NeowCompanionChoicePatch
         new CompanionOption(CompanionKind.EmberPip, "Ember Pip", typeof(EmberPipRelic), typeof(EmberPipCard)),
         new CompanionOption(CompanionKind.FrostPip, "Frost Pip", typeof(FrostPipRelic), typeof(FrostPipCard)),
         new CompanionOption(CompanionKind.StormPip, "Storm Pip", typeof(StormPipRelic), typeof(StormPipCard)),
-        new CompanionOption(CompanionKind.ThornPip, "Thorn Pip", typeof(ThornPipRelic), typeof(ThornPipCard))
+        new CompanionOption(CompanionKind.ThornPip, "Thorn Pip", typeof(ThornPipRelic), typeof(ThornPipCard)),
+        new CompanionOption(CompanionKind.KaiserCrab, "Kaiser Crab", typeof(KaiserCrabRelic), typeof(KaiserCrabCard)),
+        new CompanionOption(CompanionKind.BygoneEffigy, "Bygone Effigy", typeof(BygoneEffigyRelic), typeof(BygoneEffigyCard)),
+        new CompanionOption(CompanionKind.Byrdonis, "Byrdonis", typeof(ByrdonisRelic), typeof(ByrdonisCard)),
+        new CompanionOption(CompanionKind.PhrogParasite, "Phrog Parasite", typeof(PhrogParasiteRelic), typeof(PhrogParasiteCard)),
+        new CompanionOption(CompanionKind.SkulkingColony, "Skulking Colony", typeof(SkulkingColonyRelic), typeof(SkulkingColonyCard)),
+        new CompanionOption(CompanionKind.PhantasmalGardener, "Phantasmal Gardener", typeof(PhantasmalGardenerRelic), typeof(PhantasmalGardenerCard)),
+        new CompanionOption(CompanionKind.TerrorEel, "Terror Eel", typeof(TerrorEelRelic), typeof(TerrorEelCard)),
+        new CompanionOption(CompanionKind.Decimillipede, "Decimillipede", typeof(DecimillipedeRelic), typeof(DecimillipedeCard)),
+        new CompanionOption(CompanionKind.Entomancer, "Entomancer", typeof(EntomancerRelic), typeof(EntomancerCard)),
+        new CompanionOption(CompanionKind.InfestedPrism, "Infested Prism", typeof(InfestedPrismRelic), typeof(InfestedPrismCard)),
+        new CompanionOption(CompanionKind.KnightGang, "Knight Gang", typeof(KnightGangRelic), typeof(KnightGangCard)),
+        new CompanionOption(CompanionKind.MechaKnight, "Mecha Knight", typeof(MechaKnightRelic), typeof(MechaKnightCard)),
+        new CompanionOption(CompanionKind.SoulNexus, "Soul Nexus", typeof(SoulNexusRelic), typeof(SoulNexusCard))
     ];
+
+    // Each base-game Ancient gets a compact pool with a mixture of high-impact,
+    // steady, and situational companion cards. Elite companions are distributed
+    // across these pools, and Aeonglass intentionally appears twice so every
+    // companion remains represented while pool sizes stay close.
+    private static readonly Dictionary<Type, HashSet<CompanionKind>> CompanionPoolsByAncient = new()
+    {
+        [typeof(Neow)] =
+        [
+            CompanionKind.Architect,
+            CompanionKind.Byrdpip,
+            CompanionKind.Aeonglass,
+            CompanionKind.EmberPip,
+            CompanionKind.BygoneEffigy,
+            CompanionKind.Byrdonis
+        ],
+        [typeof(Darv)] =
+        [
+            CompanionKind.KaiserCrab,
+            CompanionKind.GremlinMerc,
+            CompanionKind.ThievingHopper,
+            CompanionKind.KinFollower,
+            CompanionKind.PhrogParasite
+        ],
+        [typeof(Nonupeipe)] =
+        [
+            CompanionKind.FrostPip,
+            CompanionKind.WaterfallGiant,
+            CompanionKind.SoulFysh,
+            CompanionKind.Seapunk,
+            CompanionKind.SkulkingColony,
+            CompanionKind.PhantasmalGardener
+        ],
+        [typeof(Orobas)] =
+        [
+            CompanionKind.LagavulinMatriarch,
+            CompanionKind.Vantom,
+            CompanionKind.Wriggler,
+            CompanionKind.Operosis,
+            CompanionKind.TerrorEel
+        ],
+        [typeof(Pael)] =
+        [
+            CompanionKind.Queen,
+            CompanionKind.CeremonialBeast,
+            CompanionKind.TestSubject,
+            CompanionKind.Shadeleaf,
+            CompanionKind.Decimillipede,
+            CompanionKind.Entomancer
+        ],
+        [typeof(Tanx)] =
+        [
+            CompanionKind.ThornPip,
+            CompanionKind.TheInsatiable,
+            CompanionKind.EyeWithTeeth,
+            CompanionKind.ShrinkerBeetle,
+            CompanionKind.InfestedPrism
+        ],
+        [typeof(Tezcatara)] =
+        [
+            CompanionKind.KnowledgeDemon,
+            CompanionKind.TheKin,
+            CompanionKind.Rustclad,
+            CompanionKind.GildedPage,
+            CompanionKind.KnightGang,
+            CompanionKind.MechaKnight
+        ],
+        [typeof(Vakuu)] =
+        [
+            CompanionKind.Glitchling,
+            CompanionKind.StormPip,
+            CompanionKind.Bonebinder,
+            CompanionKind.Aeonglass,
+            CompanionKind.SoulNexus
+        ]
+    };
 
     public static void Postfix(AncientEventModel __instance, ref IReadOnlyList<EventOption> __result)
     {
@@ -239,12 +353,7 @@ public static class NeowCompanionChoicePatch
             ? availableCompanions
             : GetSeededCompanionChoices(ancient, Math.Min(3, availableCompanions.Count), availableCompanions);
 
-        int maxPage = Math.Max(0, (int)Math.Ceiling(offeredCompanions.Count / (double)CompanionPageSize) - 1);
-        page = Math.Clamp(page, 0, maxPage);
-
-        List<CompanionOption> visibleCompanions = ModSettings.OfferAllCompanions
-            ? offeredCompanions.Skip(page * CompanionPageSize).Take(CompanionPageSize).ToList()
-            : offeredCompanions;
+        List<CompanionOption> visibleCompanions = offeredCompanions;
 
         List<EventOption> companionOptions = new();
         List<string> optionTexts = new();
@@ -297,35 +406,6 @@ public static class NeowCompanionChoicePatch
             iconFiles.Add(iconFile ?? string.Empty);
         }
 
-        if (ModSettings.OfferAllCompanions && maxPage > 0)
-        {
-            if (page > 0)
-            {
-                AddNavigationOption(
-                    ancient,
-                    selectedAncientOption,
-                    companionOptions,
-                    optionTexts,
-                    iconFiles,
-                    () => ShowCompanionChoices(ancient, selectedAncientOption, finishOriginalOption, page - 1),
-                    "Previous companions",
-                    $"Page {page} of {maxPage + 1}");
-            }
-
-            if (page < maxPage)
-            {
-                AddNavigationOption(
-                    ancient,
-                    selectedAncientOption,
-                    companionOptions,
-                    optionTexts,
-                    iconFiles,
-                    () => ShowCompanionChoices(ancient, selectedAncientOption, finishOriginalOption, page + 1),
-                    "More companions",
-                    $"Page {page + 2} of {maxPage + 1}");
-            }
-        }
-
         if (ModSettings.ChooseMultipleCompanionsAtAncient)
         {
             AddFinishChoosingOption(
@@ -367,41 +447,32 @@ public static class NeowCompanionChoicePatch
 
     private static List<CompanionOption> GetAvailableCompanions(AncientEventModel ancient)
     {
+        IEnumerable<CompanionOption> ancientPool = GetCompanionPoolForAncient(ancient);
         if (ancient.Owner == null)
         {
-            return CompanionPool.ToList();
+            return ancientPool.ToList();
         }
 
-        return CompanionPool
+        return ancientPool
             .Where(companion => !ancient.Owner.Relics.Any(relic => companion.RelicType.IsInstanceOfType(relic)))
             .ToList();
     }
 
-    private static void AddNavigationOption(
-        AncientEventModel ancient,
-        EventOption originalAncientOption,
-        List<EventOption> companionOptions,
-        List<string> optionTexts,
-        List<string> iconFiles,
-        Action selected,
-        string title,
-        string description)
+    private static IEnumerable<CompanionOption> GetCompanionPoolForAncient(AncientEventModel ancient)
     {
-        EventOption navOption = new EventOption(
-            ancient,
-            () =>
-            {
-                selected();
-                return Task.CompletedTask;
-            },
-            originalAncientOption.Title,
-            originalAncientOption.Description,
-            "COMPANION_NAV." + title.Replace(" ", "_").ToUpperInvariant(),
-            []);
+        if (ModSettings.OfferAllCompanions)
+        {
+            return CompanionPool;
+        }
 
-        companionOptions.Add(navOption);
-        optionTexts.Add(title + "\n" + description);
-        iconFiles.Add(string.Empty);
+        if (!CompanionPoolsByAncient.TryGetValue(ancient.GetType(), out HashSet<CompanionKind>? ancientPool))
+        {
+            MainFile.Logger.Info($"[NeowCompanions] No dedicated pool for {ancient.GetType().Name}; using the full companion pool.");
+            return CompanionPool;
+        }
+
+        MainFile.Logger.Info($"[NeowCompanions] Using the dedicated {ancient.GetType().Name} companion pool.");
+        return CompanionPool.Where(companion => ancientPool.Contains(companion.Kind));
     }
 
     private static async Task ChooseCompanion(AncientEventModel ancient, CompanionOption companion, Func<Task> finishOriginalOption)
@@ -516,7 +587,48 @@ public static class NeowCompanionScrollableOptionsPatch
 {
     public static void Postfix(NAncientEventLayout __instance)
     {
-        return;
+        if (NeowCompanionChoicePatch.ActiveCompanionOptionCount <= 6)
+        {
+            return;
+        }
+
+        if (AccessTools.Field(typeof(NEventLayout), "_optionsContainer")?.GetValue(__instance)
+            is not VBoxContainer optionsContainer)
+        {
+            return;
+        }
+
+        if (optionsContainer.GetParent() is ScrollContainer existingScroll)
+        {
+            existingScroll.ScrollVertical = 0;
+            return;
+        }
+
+        if (optionsContainer.GetParent() is not Container parent)
+        {
+            return;
+        }
+
+        int childIndex = optionsContainer.GetIndex();
+        float viewportHeight = __instance.GetViewportRect().Size.Y;
+        float listHeight = Mathf.Clamp(viewportHeight * 0.62f, 360f, 560f);
+
+        ScrollContainer scroll = new()
+        {
+            Name = "NeowCompanionScrollList",
+            CustomMinimumSize = new Vector2(0f, listHeight),
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            SizeFlagsVertical = Control.SizeFlags.ShrinkBegin,
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            VerticalScrollMode = ScrollContainer.ScrollMode.Auto,
+            FollowFocus = true
+        };
+
+        parent.AddChild(scroll);
+        parent.MoveChild(scroll, childIndex);
+        optionsContainer.Reparent(scroll);
+        optionsContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        optionsContainer.SizeFlagsVertical = Control.SizeFlags.ShrinkBegin;
     }
 }
 

@@ -42,7 +42,20 @@ public sealed class NeowCompanionRelicPool : CustomRelicPoolModel
             ModelDb.Relic<EmberPipRelic>(),
             ModelDb.Relic<FrostPipRelic>(),
             ModelDb.Relic<StormPipRelic>(),
-            ModelDb.Relic<ThornPipRelic>()
+            ModelDb.Relic<ThornPipRelic>(),
+            ModelDb.Relic<KaiserCrabRelic>(),
+            ModelDb.Relic<BygoneEffigyRelic>(),
+            ModelDb.Relic<ByrdonisRelic>(),
+            ModelDb.Relic<PhrogParasiteRelic>(),
+            ModelDb.Relic<SkulkingColonyRelic>(),
+            ModelDb.Relic<PhantasmalGardenerRelic>(),
+            ModelDb.Relic<TerrorEelRelic>(),
+            ModelDb.Relic<DecimillipedeRelic>(),
+            ModelDb.Relic<EntomancerRelic>(),
+            ModelDb.Relic<InfestedPrismRelic>(),
+            ModelDb.Relic<KnightGangRelic>(),
+            ModelDb.Relic<MechaKnightRelic>(),
+            ModelDb.Relic<SoulNexusRelic>()
         ];
     }
 }

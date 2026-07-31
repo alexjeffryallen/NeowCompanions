@@ -46,6 +46,18 @@ public static class PlayerDeathCompanionPatch
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<FrostPipPet>(), "Frost Pip");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<StormPipPet>(), "Storm Pip");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<ThornPipPet>(), "Thorn Pip");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<BygoneEffigyPet>(), "Bygone Effigy");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<ByrdonisPet>(), "Byrdonis");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<PhrogParasitePet>(), "Phrog Parasite");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SkulkingColonyPet>(), "Skulking Colony");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<PhantasmalGardenerPet>(), "Phantasmal Gardener");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<TerrorEelPet>(), "Terror Eel");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<DecimillipedePet>(), "Decimillipede");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<EntomancerPet>(), "Entomancer");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<InfestedPrismPet>(), "Infested Prism");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<KnightGangPet>(), "Knight Gang");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<MechaKnightPet>(), "Mecha Knight");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SoulNexusPet>(), "Soul Nexus");
     }
 
     private static void TriggerDeathAnimation(Creature? pet, string companionName)

@@ -32,7 +32,20 @@ public enum CompanionKind
     EmberPip,
     FrostPip,
     StormPip,
-    ThornPip
+    ThornPip,
+    KaiserCrab,
+    BygoneEffigy,
+    Byrdonis,
+    PhrogParasite,
+    SkulkingColony,
+    PhantasmalGardener,
+    TerrorEel,
+    Decimillipede,
+    Entomancer,
+    InfestedPrism,
+    KnightGang,
+    MechaKnight,
+    SoulNexus
 }
 
 public static class CompanionState

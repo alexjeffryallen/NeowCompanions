@@ -105,6 +105,45 @@ public static class NeowCompanionText
             "THORN_PIP.title" => "Thorn Pip",
             "THORN_PIP.description" => "Gain Thorn Pip as your companion.",
 
+            "KAISER_CRAB.title" => "Kaiser Crab",
+            "KAISER_CRAB.description" => "Gain Kaiser Crab as your companion.",
+
+            "BYGONE_EFFIGY.title" => "Bygone Effigy",
+            "BYGONE_EFFIGY.description" => "Gain Bygone Effigy as your companion.",
+
+            "BYRDONIS.title" => "Byrdonis",
+            "BYRDONIS.description" => "Gain Byrdonis as your companion.",
+
+            "PHROG_PARASITE.title" => "Phrog Parasite",
+            "PHROG_PARASITE.description" => "Gain Phrog Parasite as your companion.",
+
+            "SKULKING_COLONY.title" => "Skulking Colony",
+            "SKULKING_COLONY.description" => "Gain Skulking Colony as your companion.",
+
+            "PHANTASMAL_GARDENER.title" => "Phantasmal Gardener",
+            "PHANTASMAL_GARDENER.description" => "Gain Phantasmal Gardener as your companion.",
+
+            "TERROR_EEL.title" => "Terror Eel",
+            "TERROR_EEL.description" => "Gain Terror Eel as your companion.",
+
+            "DECIMILLIPEDE.title" => "Decimillipede",
+            "DECIMILLIPEDE.description" => "Gain Decimillipede as your companion.",
+
+            "ENTOMANCER.title" => "Entomancer",
+            "ENTOMANCER.description" => "Gain Entomancer as your companion.",
+
+            "INFESTED_PRISM.title" => "Infested Prism",
+            "INFESTED_PRISM.description" => "Gain Infested Prism as your companion.",
+
+            "KNIGHT_GANG.title" => "Knight Gang",
+            "KNIGHT_GANG.description" => "Gain the Spectral Knight of the Knight Gang as your companion.",
+
+            "MECHA_KNIGHT.title" => "Mecha Knight",
+            "MECHA_KNIGHT.description" => "Gain Mecha Knight as your companion.",
+
+            "SOUL_NEXUS.title" => "Soul Nexus",
+            "SOUL_NEXUS.description" => "Gain Soul Nexus as your companion.",
+
             "SHADELEAF.dialogue.0" => "...",
             "SHADELEAF.dialogue.1" => "Too slow.",
             "SHADELEAF.dialogue.2" => "Watch closely.",

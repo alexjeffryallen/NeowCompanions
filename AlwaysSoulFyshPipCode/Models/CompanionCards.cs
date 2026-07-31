@@ -190,7 +190,8 @@ public sealed class CeremonialBeastCard : CustomCardModel
             CombatState.HittableEnemies.Where(enemy => enemy.IsAlive),
             DynamicVars.Damage,
             Owner.Creature,
-            this);
+            this,
+            cardPlay);
     }
 
     protected override void OnUpgrade()
@@ -382,7 +383,7 @@ public sealed class GremlinMercCard : CustomCardModel
             await CreatureCmd.TriggerAnim(gremlinMerc, "Attack", 0.5f);
         }
 
-        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this);
+        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this, cardPlay);
         if (!cardPlay.Target.IsAlive)
         {
             await PlayerCmd.GainGold(10m, Owner, false);
@@ -439,7 +440,7 @@ public sealed class ThievingHopperCard : CustomCardModel
             await CreatureCmd.TriggerAnim(thievingHopper, "Attack", 0.5f);
         }
 
-        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this);
+        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this, cardPlay);
         if (!cardPlay.Target.IsAlive)
         {
             List<CardModel> candidateCards = ModelDb.AllCards

@@ -48,7 +48,20 @@ public sealed class NeowCompanionCardPool : CustomCardPoolModel
             ModelDb.Card<EmberPipCard>(),
             ModelDb.Card<FrostPipCard>(),
             ModelDb.Card<StormPipCard>(),
-            ModelDb.Card<ThornPipCard>()
+            ModelDb.Card<ThornPipCard>(),
+            ModelDb.Card<KaiserCrabCard>(),
+            ModelDb.Card<BygoneEffigyCard>(),
+            ModelDb.Card<ByrdonisCard>(),
+            ModelDb.Card<PhrogParasiteCard>(),
+            ModelDb.Card<SkulkingColonyCard>(),
+            ModelDb.Card<PhantasmalGardenerCard>(),
+            ModelDb.Card<TerrorEelCard>(),
+            ModelDb.Card<DecimillipedeCard>(),
+            ModelDb.Card<EntomancerCard>(),
+            ModelDb.Card<InfestedPrismCard>(),
+            ModelDb.Card<KnightGangCard>(),
+            ModelDb.Card<MechaKnightCard>(),
+            ModelDb.Card<SoulNexusCard>()
         ];
     }
 }

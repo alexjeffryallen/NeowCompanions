@@ -14,6 +14,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Localization;
@@ -26,6 +27,7 @@ using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Vfx;
+using MegaCrit.Sts2.Core.Nodes.Vfx.Backgrounds;
 using MegaCrit.Sts2.Core.ValueProps;
 
 namespace NeowCompanions.NeowCompanionsCode.Models;
@@ -210,12 +212,12 @@ public sealed class AeonglassCard : BossCompanionCard<AeonglassPet>
         ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
 
         await TriggerPetAnimation<AeonglassPet>("Attack", 0.5f);
-        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this);
+        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this, cardPlay);
     }
 
     protected override Task OnTurnEndInHand(PlayerChoiceContext choiceContext)
     {
-        return CreatureCmd.Damage(choiceContext, Owner.Creature, 2m, DamageProps.cardHpLoss, Owner.Creature, this);
+        return CreatureCmd.Damage(choiceContext, Owner.Creature, 2m, DamageProps.cardHpLoss, Owner.Creature);
     }
 
     protected override void OnUpgrade()
@@ -511,7 +513,7 @@ public sealed class KnowledgeDemonCard : BossCompanionCard<KnowledgeDemonPet>
             await CompanionAnimation.TryTriggerAnimation(knowledgeDemon, "Buff", "Cast", "Attack");
         }
 
-        await CreatureCmd.Damage(choiceContext, Owner.Creature, 6m, DamageProps.cardHpLoss, Owner.Creature, this);
+        await CreatureCmd.Damage(choiceContext, Owner.Creature, 6m, DamageProps.cardHpLoss, Owner.Creature, this, cardPlay);
         await PowerCmd.Apply<KnowledgeDemonDrawPower>(choiceContext, Owner.Creature, 1m, Owner.Creature, this);
     }
 
@@ -771,7 +773,7 @@ public sealed class SeapunkCard : BossCompanionCard<SeapunkPet>
 
         for (int i = 0; i < HitCount && cardPlay.Target.IsAlive; i++)
         {
-            await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this);
+            await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this, cardPlay);
         }
     }
 
@@ -784,6 +786,281 @@ public sealed class SeapunkCard : BossCompanionCard<SeapunkPet>
 public sealed class SeapunkPet : BossCompanionPet<Seapunk>
 {
     protected override float PetScale => 0.60f;
+}
+
+[Pool(typeof(NeowCompanionRelicPool))]
+public sealed class KaiserCrabRelic : BossCompanionRelic<KaiserCrabPet>
+{
+    protected override string CompanionName => "Kaiser Crab";
+    protected override string RelicIconFileName => "relic_kaiser_crab.png";
+
+    public override async Task BeforeCombatStart()
+    {
+        await base.BeforeCombatStart();
+        KaiserCrabCompanionVisuals.EnsureVisible();
+    }
+}
+
+[Pool(typeof(NeowCompanionCardPool))]
+public sealed class KaiserCrabCard : BossCompanionCard<KaiserCrabPet>
+{
+    protected override string CompanionName => "Kaiser Crab";
+    protected override string CardTitle => "Royal Broadside";
+    protected override string CardArtFileName => "card_kaiser_crab.png";
+
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<KaiserCrabBroadsidePower>(10m)];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<KaiserCrabBroadsidePower>()];
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", CardTitle),
+        ("description", "At the start of each turn, deal {KaiserCrabBroadsidePower} damage to ALL enemies."),
+        ("flavor", "A shoreline argument, settled by artillery.")
+    ];
+
+    public KaiserCrabCard()
+        : base(2, CardType.Power, TargetType.Self)
+    {
+    }
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        KaiserCrabCompanionVisuals.EnsureVisible();
+        await PowerCmd.Apply<KaiserCrabBroadsidePower>(
+            choiceContext,
+            Owner.Creature,
+            DynamicVars["KaiserCrabBroadsidePower"].BaseValue,
+            Owner.Creature,
+            this);
+    }
+
+    protected override void OnUpgrade()
+    {
+        EnergyCost.UpgradeBy(-1);
+    }
+}
+
+public sealed class KaiserCrabBroadsidePower : CustomPowerModel
+{
+    public override PowerType Type => PowerType.Buff;
+
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", "Royal Broadside"),
+        ("description", "At the start of each turn, deal {Amount} damage to ALL enemies.")
+    ];
+
+    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, MegaCrit.Sts2.Core.Entities.Players.Player player)
+    {
+        if (player.Creature != Owner || CombatState == null)
+        {
+            return;
+        }
+
+        IEnumerable<Creature> targets = CombatState.HittableEnemies.Where(enemy => enemy.IsAlive).ToList();
+        if (!targets.Any())
+        {
+            return;
+        }
+
+        Flash();
+        await KaiserCrabCompanionVisuals.PlayBroadside();
+        await CreatureCmd.Damage(choiceContext, targets, Amount, DamageProps.cardUnpowered, Owner);
+    }
+}
+
+public sealed class KaiserCrabPet : CustomMonsterModel
+{
+    public override int MinInitialHp => 9999;
+
+    public override int MaxInitialHp => 9999;
+
+    public override bool IsHealthBarVisible => false;
+
+    public override NCreatureVisuals? CreateCustomVisuals()
+    {
+        NCreatureVisuals visuals = ModelDb.Monster<SoulFysh>().CreateVisuals();
+        visuals.Visible = false;
+        visuals.Scale = Vector2.Zero;
+        visuals.Modulate = new Color(1f, 1f, 1f, 0f);
+        return visuals;
+    }
+
+    public override MegaCrit.Sts2.Core.Animation.CreatureAnimator? SetupCustomAnimationStates(MegaSprite controller)
+    {
+        return ModelDb.Monster<SoulFysh>().GenerateAnimator(controller);
+    }
+
+    protected override MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterMoveStateMachine GenerateMoveStateMachine()
+    {
+        List<MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterState> states = [];
+        MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MoveState idle =
+            new("NOTHING_MOVE", (IReadOnlyList<Creature> _) => Task.CompletedTask);
+
+        idle.FollowUpState = idle;
+        states.Add(idle);
+
+        return new MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterMoveStateMachine(states, idle);
+    }
+}
+
+internal static class KaiserCrabCompanionVisuals
+{
+    private static NKaiserCrabBossBackground? crab;
+    private static NCombatBackground? crabScene;
+
+    public static void EnsureVisible()
+    {
+        if (crab != null && GodotObject.IsInstanceValid(crab))
+        {
+            crab.Visible = true;
+            if (crabScene != null && GodotObject.IsInstanceValid(crabScene))
+            {
+                crabScene.Visible = true;
+            }
+            return;
+        }
+
+        crab = null;
+        crabScene = null;
+        Control? roomBackground = NCombatRoom.Instance?.Background;
+        if (roomBackground == null)
+        {
+            MainFile.Logger.Info("[NeowCompanions] Kaiser Crab visual could not attach: combat background is not ready.");
+            return;
+        }
+
+        try
+        {
+            string scenePath = SceneHelper.GetScenePath("backgrounds/kaiser_crab_boss/kaiser_crab_boss_background");
+            NCombatBackground kaiserBackground = PreloadManager.Cache.GetScene(scenePath)
+                .Instantiate<NCombatBackground>(PackedScene.GenEditState.Disabled);
+            NKaiserCrabBossBackground? kaiserCrab = kaiserBackground.GetNodeOrNull<NKaiserCrabBossBackground>("%KaiserCrab");
+            if (kaiserCrab == null)
+            {
+                MainFile.Logger.Error("[NeowCompanions] Kaiser Crab visual could not find %KaiserCrab in background scene.");
+                kaiserBackground.QueueFree();
+                return;
+            }
+
+            MainFile.Logger.Info($"[NeowCompanions] Kaiser Crab visual scene loaded. Original position={kaiserCrab.Position}, scale={kaiserCrab.Scale}.");
+            HideNonCrabVisuals(kaiserBackground, kaiserCrab);
+            kaiserBackground.Name = "NeowCompanionsKaiserCrabScene";
+            kaiserBackground.MouseFilter = Control.MouseFilterEnum.Ignore;
+            kaiserBackground.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            kaiserBackground.Position = Vector2.Zero;
+            kaiserBackground.Size = roomBackground.Size;
+            kaiserBackground.ZIndex = 0;
+            kaiserBackground.ZAsRelative = true;
+            kaiserBackground.Visible = true;
+            kaiserCrab.Name = "NeowCompanionsKaiserCrab";
+            kaiserCrab.ZIndex = 0;
+            kaiserCrab.ZAsRelative = true;
+            CompanionDrag.MakeNodeDraggable(kaiserCrab);
+            kaiserCrab.AddChild(new KaiserCrabVisibleController());
+            roomBackground.AddChild(kaiserBackground);
+            kaiserCrab.CallDeferred(CanvasItem.MethodName.SetVisible, true);
+            crab = kaiserCrab;
+            crabScene = kaiserBackground;
+            MainFile.Logger.Info("[NeowCompanions] Kaiser Crab visual attached to combat background.");
+        }
+        catch (Exception ex)
+        {
+            MainFile.Logger.Error("[NeowCompanions] Kaiser Crab visual failed to attach: " + ex);
+        }
+    }
+
+    private static void HideNonCrabVisuals(Node root, NKaiserCrabBossBackground kaiserCrab)
+    {
+        HashSet<Node> crabAncestors = new();
+        for (Node? node = kaiserCrab; node != null; node = node.GetParent())
+        {
+            crabAncestors.Add(node);
+            if (node == root)
+            {
+                break;
+            }
+        }
+
+        HideNonCrabVisualsRecursive(root, root, kaiserCrab, crabAncestors);
+    }
+
+    private static void HideNonCrabVisualsRecursive(Node root, Node node, NKaiserCrabBossBackground kaiserCrab, HashSet<Node> crabAncestors)
+    {
+        if (node == kaiserCrab)
+        {
+            return;
+        }
+
+        if (node is CanvasItem canvasItem && node != root && node != kaiserCrab && !crabAncestors.Contains(node))
+        {
+            canvasItem.Visible = false;
+        }
+
+        foreach (Node child in node.GetChildren())
+        {
+            HideNonCrabVisualsRecursive(root, child, kaiserCrab, crabAncestors);
+        }
+    }
+
+    public static async Task PlayBroadside()
+    {
+        EnsureVisible();
+        if (crab == null || !GodotObject.IsInstanceValid(crab))
+        {
+            return;
+        }
+
+        SfxCmd.Play("event:/sfx/enemy/enemy_attacks/kaiser_crab/kaiser_crab_left_attack_slam");
+        await crab.PlayAttackAnim(NKaiserCrabBossBackground.ArmSide.Left, "attack_heavy", 0.45f);
+        SfxCmd.Play("event:/sfx/enemy/enemy_attacks/kaiser_crab/kaiser_crab_right_attack_slam");
+        await crab.PlayAttackAnim(NKaiserCrabBossBackground.ArmSide.Right, "attack_med", 0.45f);
+    }
+
+    public static async Task PlayRandomAttack()
+    {
+        EnsureVisible();
+        if (crab == null || !GodotObject.IsInstanceValid(crab))
+        {
+            return;
+        }
+
+        if (GD.Randf() < 0.5f)
+        {
+            await crab.PlayAttackAnim(NKaiserCrabBossBackground.ArmSide.Left, "attack_med", 0.25f);
+        }
+        else
+        {
+            await crab.PlayAttackAnim(NKaiserCrabBossBackground.ArmSide.Right, "attack", 0.25f);
+        }
+    }
+}
+
+internal sealed partial class KaiserCrabVisibleController : Node
+{
+    private int frames;
+
+    public override void _Process(double delta)
+    {
+        if (GetParent() is not NKaiserCrabBossBackground crab)
+        {
+            QueueFree();
+            return;
+        }
+
+        crab.Visible = true;
+        crab.ZIndex = 0;
+        crab.ZAsRelative = true;
+
+        frames++;
+        if (frames > 90)
+        {
+            QueueFree();
+        }
+    }
 }
 
 [Pool(typeof(NeowCompanionRelicPool))]
@@ -917,7 +1194,7 @@ public sealed class OperosisCard : BossCompanionCard<OperosisPet>
         OstyDamageVar ostyDamage = (OstyDamageVar)DynamicVars[OstyDamageVar.defaultName];
         SfxCmd.Play(Osty.ostyAttackSfx);
         await CreatureCmd.TriggerAnim(osty, Osty.pokeAnim, Osty.attackerAnimDelay);
-        await CreatureCmd.Damage(choiceContext, cardPlay.Target, ostyDamage.BaseValue, ostyDamage.Props, osty, this);
+        await CreatureCmd.Damage(choiceContext, cardPlay.Target, ostyDamage.BaseValue, ostyDamage.Props, osty, this, cardPlay);
     }
 
     protected override void OnUpgrade()
@@ -1215,7 +1492,19 @@ public sealed class ArchitectCard : BossCompanionCard<ArchitectPet>
             ModelDb.Card<NeedleTossCard>(),
             ModelDb.Card<OverclockCard>(),
             ModelDb.Card<GraveCallCard>(),
-            ModelDb.Card<CommandingFlourishCard>()
+            ModelDb.Card<CommandingFlourishCard>(),
+            ModelDb.Card<BygoneEffigyCard>(),
+            ModelDb.Card<ByrdonisCard>(),
+            ModelDb.Card<PhrogParasiteCard>(),
+            ModelDb.Card<SkulkingColonyCard>(),
+            ModelDb.Card<PhantasmalGardenerCard>(),
+            ModelDb.Card<TerrorEelCard>(),
+            ModelDb.Card<DecimillipedeCard>(),
+            ModelDb.Card<EntomancerCard>(),
+            ModelDb.Card<InfestedPrismCard>(),
+            ModelDb.Card<KnightGangCard>(),
+            ModelDb.Card<MechaKnightCard>(),
+            ModelDb.Card<SoulNexusCard>()
         ];
     }
 }
@@ -1287,7 +1576,8 @@ public sealed class BuffUpCard : BossCompanionCard<RustcladPet>
             DynamicVars.HpLoss.BaseValue,
             ValueProp.Unblockable | ValueProp.Unpowered | ValueProp.Move,
             Owner.Creature,
-            this);
+            this,
+            cardPlay);
 
         await PowerCmd.Apply<RustcladBuffUpPower>(
             choiceContext,
@@ -1446,7 +1736,7 @@ public sealed class NeedleTossCard : BossCompanionCard<ShadeleafPet>
         await CharacterCompanionDialogue.SayRandom<ShadeleafPet>(Owner, Lines, VfxColor.Swamp);
         await TriggerPetAnimation<ShadeleafPet>("Shiv", 0.15f);
         await DamageCmd.Attack(DynamicVars.Damage.BaseValue)
-            .FromCard(this)
+            .FromCard(this, cardPlay)
             .Targeting(cardPlay.Target)
             .WithHitVfxNode(target => NShivThrowVfx.Create(Owner.Creature, target, Colors.Green))
             .Execute(choiceContext);
@@ -2563,7 +2853,7 @@ public sealed class EmberPipCard : BossCompanionCard<EmberPipPet>
     {
         ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
         await TriggerPetAnimation<EmberPipPet>("Attack", 0.35f);
-        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this);
+        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this, cardPlay);
         await PowerCmd.Apply<VulnerablePower>(choiceContext, cardPlay.Target, DynamicVars.Vulnerable.BaseValue, Owner.Creature, this);
     }
 
@@ -2696,7 +2986,7 @@ public sealed class StormPipCard : BossCompanionCard<StormPipPet>
         List<Creature> enemies = CombatState.HittableEnemies.Where(enemy => enemy.IsAlive).ToList();
         for (int i = 0; i < DynamicVars.Repeat.IntValue; i++)
         {
-            await CreatureCmd.Damage(choiceContext, enemies, DynamicVars.Damage, Owner.Creature, this);
+            await CreatureCmd.Damage(choiceContext, enemies, DynamicVars.Damage, Owner.Creature, this, cardPlay);
         }
     }
 
@@ -3003,7 +3293,20 @@ internal static class CompanionAnimation
             CreateAttackCandidate(owner.PlayerCombatState.GetPet<EmberPipPet>(), "Attack"),
             CreateAttackCandidate(owner.PlayerCombatState.GetPet<FrostPipPet>(), "Attack"),
             CreateAttackCandidate(owner.PlayerCombatState.GetPet<StormPipPet>(), "Attack"),
-            CreateAttackCandidate(owner.PlayerCombatState.GetPet<ThornPipPet>(), "Attack")
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<ThornPipPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<KaiserCrabPet>()),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<BygoneEffigyPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<ByrdonisPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<PhrogParasitePet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<SkulkingColonyPet>(), "AttackDouble"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<PhantasmalGardenerPet>(), "AttackMulti"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<TerrorEelPet>(), "AttackTripleTrigger"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<DecimillipedePet>(), "regenerate"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<EntomancerPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<InfestedPrismPet>(), "AttackDouble"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<KnightGangPet>(), "AttackSword"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<MechaKnightPet>(), "attack_cleave"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<SoulNexusPet>(), "Attack")
         ];
 
         candidates = candidates
@@ -3018,6 +3321,12 @@ internal static class CompanionAnimation
         }
 
         AttackAnimationCandidate candidate = owner.RunState.Rng.CombatTargets.NextItem(candidates) ?? candidates[0];
+        if (candidate.AnimationNames.Length == 0)
+        {
+            await KaiserCrabCompanionVisuals.PlayRandomAttack();
+            return;
+        }
+
         await TryTriggerAnimation(candidate.Pet, 0.2f, candidate.AnimationNames);
     }
 
