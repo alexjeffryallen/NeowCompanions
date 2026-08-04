@@ -26,11 +26,21 @@ internal static class CompanionDrag
 
         return visuals;
     }
+
+    public static T MakeLinkedDraggable<T>(T visuals, string linkKey, Vector2 linkOffset)
+        where T : Node2D
+    {
+        MakeNodeDraggable(visuals);
+        CompanionDragController controller = visuals.GetNode<CompanionDragController>(nameof(CompanionDragController));
+        controller.LinkKey = linkKey;
+        controller.LinkOffset = linkOffset;
+        return visuals;
+    }
 }
 
-internal sealed partial class CompanionDragController : Node
+internal sealed partial class CompanionDragController : Node2D
 {
-    private const float HitRadius = 130.0f;
+    private const float BoundsPadding = 10.0f;
     private const float ScaleStep = 1.1f;
     private const float MinScaleMultiplier = 0.4f;
     private const float MaxScaleMultiplier = 2.5f;
@@ -39,13 +49,35 @@ internal sealed partial class CompanionDragController : Node
 
     private static readonly Dictionary<string, Vector2> SavedNormalizedPositions = new();
     private static readonly Dictionary<string, float> SavedScaleMultipliers = new();
+    private static readonly Dictionary<string, List<CompanionDragController>> LinkedControllers = new();
+    private static readonly Dictionary<string, Vector2> LinkedAnchors = new();
+    private static readonly List<CompanionDragController> AllControllers = [];
     private static CompanionDragController? activeDragController;
+
+    public string? LinkKey { get; set; }
+    public Vector2 LinkOffset { get; set; }
 
     private bool isDragging;
     private bool hasInitializedPosition;
     private Vector2 dragOffset;
     private string? companionKey;
     private float scaleMultiplier = 1f;
+
+    public override void _Ready()
+    {
+        AllControllers.Add(this);
+
+        if (LinkKey == null)
+            return;
+
+        if (!LinkedControllers.TryGetValue(LinkKey, out List<CompanionDragController>? controllers))
+        {
+            controllers = [];
+            LinkedControllers[LinkKey] = controllers;
+        }
+
+        controllers.Add(this);
+    }
 
     public override void _Process(double delta)
     {
@@ -57,7 +89,17 @@ internal sealed partial class CompanionDragController : Node
         InitializePosition(visuals);
 
         bool rightMouseDown = Input.IsMouseButtonPressed(MouseButton.Right);
+        bool leftMouseDown = Input.IsMouseButtonPressed(MouseButton.Left);
         Vector2 mousePosition = visuals.GetGlobalMousePosition();
+        QueueRedraw();
+
+        if (rightMouseDown && leftMouseDown)
+        {
+            if (activeDragController == this)
+                activeDragController = null;
+            isDragging = false;
+            return;
+        }
 
         if (!rightMouseDown)
         {
@@ -79,18 +121,31 @@ internal sealed partial class CompanionDragController : Node
                 return;
             }
 
-            if (visuals.GlobalPosition.DistanceTo(mousePosition) > HitRadius)
+            if (FindClosestController(mousePosition) != this
+                || !GetGlobalTargetRect(visuals).HasPoint(mousePosition))
             {
                 return;
             }
 
             activeDragController = this;
             isDragging = true;
-            dragOffset = visuals.GlobalPosition - mousePosition;
+            Vector2 dragOrigin = LinkKey != null && LinkedAnchors.TryGetValue(LinkKey, out Vector2 anchor)
+                ? anchor
+                : visuals.GlobalPosition;
+            dragOffset = dragOrigin - mousePosition;
         }
 
-        visuals.GlobalPosition = ClampPosition(mousePosition + dragOffset);
-        SavePosition(visuals);
+        Vector2 newPosition = ClampPosition(mousePosition + dragOffset);
+        if (LinkKey != null)
+        {
+            SetLinkedAnchor(newPosition);
+            SaveLinkedPosition(visuals, newPosition);
+        }
+        else
+        {
+            visuals.GlobalPosition = newPosition;
+            SavePosition(visuals);
+        }
     }
 
     public override void _ExitTree()
@@ -99,6 +154,40 @@ internal sealed partial class CompanionDragController : Node
         {
             activeDragController = null;
         }
+
+        AllControllers.Remove(this);
+
+        if (LinkKey != null && LinkedControllers.TryGetValue(LinkKey, out List<CompanionDragController>? controllers))
+        {
+            controllers.Remove(this);
+            if (controllers.Count == 0)
+            {
+                LinkedControllers.Remove(LinkKey);
+                LinkedAnchors.Remove(LinkKey);
+            }
+        }
+    }
+
+    public override void _Draw()
+    {
+        if (!Input.IsMouseButtonPressed(MouseButton.Right)
+            || GetParent() is not Node2D visuals)
+            return;
+
+        bool showAllZones = Input.IsMouseButtonPressed(MouseButton.Left);
+        if (!showAllZones && FindClosestController(visuals.GetGlobalMousePosition()) != this)
+            return;
+
+        Rect2 targetRect = GetGlobalTargetRect(visuals);
+        Vector2[] points =
+        [
+            ToLocal(targetRect.Position),
+            ToLocal(new Vector2(targetRect.End.X, targetRect.Position.Y)),
+            ToLocal(targetRect.End),
+            ToLocal(new Vector2(targetRect.Position.X, targetRect.End.Y))
+        ];
+        DrawColoredPolygon(points, new Color(0.15f, 0.85f, 1f, 0.10f));
+        DrawPolyline([.. points, points[0]], new Color(0.2f, 0.9f, 1f, 0.95f), 3f, true);
     }
 
     public override void _Input(InputEvent inputEvent)
@@ -123,7 +212,14 @@ internal sealed partial class CompanionDragController : Node
             MaxScaleMultiplier);
         float relativeChange = newMultiplier / scaleMultiplier;
 
-        visuals.Scale *= relativeChange;
+        if (LinkKey != null)
+        {
+            ScaleLinked(relativeChange, newMultiplier);
+        }
+        else
+        {
+            visuals.Scale *= relativeChange;
+        }
         scaleMultiplier = newMultiplier;
         if (companionKey != null)
         {
@@ -146,24 +242,158 @@ internal sealed partial class CompanionDragController : Node
             return;
         }
 
-        hasInitializedPosition = true;
-        companionKey = creatureNode.Entity.ModelId.ToString();
-        if (SavedScaleMultipliers.TryGetValue(companionKey, out float savedScaleMultiplier))
-        {
-            scaleMultiplier = savedScaleMultiplier;
-            visuals.Scale *= scaleMultiplier;
-        }
-
         Vector2 viewportSize = visuals.GetViewportRect().Size;
-        if (viewportSize.X <= 0f || viewportSize.Y <= 0f
-            || !SavedNormalizedPositions.TryGetValue(companionKey, out Vector2 normalizedPosition))
+        if (viewportSize.X <= 0f || viewportSize.Y <= 0f)
         {
             return;
         }
 
-        visuals.GlobalPosition = ClampPosition(new Vector2(
-            normalizedPosition.X * viewportSize.X,
-            normalizedPosition.Y * viewportSize.Y));
+        hasInitializedPosition = true;
+        companionKey = LinkKey ?? creatureNode.Entity.ModelId.ToString();
+        if (SavedScaleMultipliers.TryGetValue(companionKey, out float savedScaleMultiplier))
+        {
+            scaleMultiplier = savedScaleMultiplier;
+            if (LinkKey == null)
+                visuals.Scale *= scaleMultiplier;
+        }
+
+        if (LinkKey != null)
+        {
+            InitializeLinkedPosition(visuals);
+            return;
+        }
+
+        if (SavedNormalizedPositions.TryGetValue(companionKey, out Vector2 normalizedPosition))
+        {
+            visuals.GlobalPosition = ClampPosition(new Vector2(
+                normalizedPosition.X * viewportSize.X,
+                normalizedPosition.Y * viewportSize.Y));
+        }
+    }
+
+    private void InitializeLinkedPosition(Node2D visuals)
+    {
+        if (LinkKey == null)
+            return;
+
+        Vector2 viewportSize = visuals.GetViewportRect().Size;
+        Vector2 anchor;
+        if (!LinkedAnchors.TryGetValue(LinkKey, out anchor))
+        {
+            anchor = visuals.GlobalPosition - LinkOffset * scaleMultiplier;
+            if (viewportSize.X > 0f && viewportSize.Y > 0f
+                && SavedNormalizedPositions.TryGetValue(LinkKey, out Vector2 normalizedPosition))
+            {
+                anchor = ClampPosition(new Vector2(
+                    normalizedPosition.X * viewportSize.X,
+                    normalizedPosition.Y * viewportSize.Y));
+            }
+            LinkedAnchors[LinkKey] = anchor;
+        }
+
+        if (SavedScaleMultipliers.ContainsKey(LinkKey))
+            visuals.Scale *= scaleMultiplier;
+        visuals.GlobalPosition = anchor + LinkOffset * scaleMultiplier;
+    }
+
+    private static CompanionDragController? FindClosestController(Vector2 mousePosition)
+    {
+        CompanionDragController? closest = null;
+        float closestDistance = float.MaxValue;
+        foreach (CompanionDragController controller in AllControllers)
+        {
+            if (!GodotObject.IsInstanceValid(controller)
+                || controller.GetParent() is not Node2D visuals
+                || !visuals.IsVisibleInTree())
+                continue;
+
+            Rect2 targetRect = GetGlobalTargetRect(visuals);
+            Vector2 nearestPoint = new(
+                Mathf.Clamp(mousePosition.X, targetRect.Position.X, targetRect.End.X),
+                Mathf.Clamp(mousePosition.Y, targetRect.Position.Y, targetRect.End.Y));
+            float distance = nearestPoint.DistanceSquaredTo(mousePosition);
+            if (distance == closestDistance && closest?.GetParent() is Node2D previousVisuals)
+            {
+                float currentCenterDistance = targetRect.GetCenter().DistanceSquaredTo(mousePosition);
+                float previousCenterDistance = GetGlobalTargetRect(previousVisuals).GetCenter().DistanceSquaredTo(mousePosition);
+                if (currentCenterDistance >= previousCenterDistance)
+                    continue;
+            }
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closest = controller;
+            }
+        }
+        return closest;
+    }
+
+    private static Rect2 GetGlobalTargetRect(Node2D visualNode)
+    {
+        if (visualNode is NCreatureVisuals visuals
+            && visuals.SpineBody != null
+            && visuals.SpineBody.BoundObject is Node2D spineNode)
+        {
+            Rect2 localBounds = visuals.SpineBody.GetSkeleton().GetBounds();
+            Vector2[] globalCorners =
+            [
+                spineNode.ToGlobal(localBounds.Position),
+                spineNode.ToGlobal(new Vector2(localBounds.End.X, localBounds.Position.Y)),
+                spineNode.ToGlobal(localBounds.End),
+                spineNode.ToGlobal(new Vector2(localBounds.Position.X, localBounds.End.Y))
+            ];
+            float minX = Mathf.Min(Mathf.Min(globalCorners[0].X, globalCorners[1].X), Mathf.Min(globalCorners[2].X, globalCorners[3].X));
+            float minY = Mathf.Min(Mathf.Min(globalCorners[0].Y, globalCorners[1].Y), Mathf.Min(globalCorners[2].Y, globalCorners[3].Y));
+            float maxX = Mathf.Max(Mathf.Max(globalCorners[0].X, globalCorners[1].X), Mathf.Max(globalCorners[2].X, globalCorners[3].X));
+            float maxY = Mathf.Max(Mathf.Max(globalCorners[0].Y, globalCorners[1].Y), Mathf.Max(globalCorners[2].Y, globalCorners[3].Y));
+            return new Rect2(minX, minY, maxX - minX, maxY - minY).Grow(BoundsPadding);
+        }
+
+        if (visualNode is NCreatureVisuals fallbackVisuals && fallbackVisuals.Bounds != null)
+            return fallbackVisuals.Bounds.GetGlobalRect().Grow(BoundsPadding);
+
+        return new Rect2(visualNode.GlobalPosition - new Vector2(45f, 45f), new Vector2(90f, 90f));
+    }
+
+    private void SetLinkedAnchor(Vector2 anchor)
+    {
+        if (LinkKey == null)
+            return;
+
+        LinkedAnchors[LinkKey] = anchor;
+        if (!LinkedControllers.TryGetValue(LinkKey, out List<CompanionDragController>? controllers))
+            return;
+
+        foreach (CompanionDragController controller in controllers)
+        {
+            if (controller.GetParent() is Node2D member)
+                member.GlobalPosition = anchor + controller.LinkOffset * scaleMultiplier;
+        }
+    }
+
+    private void ScaleLinked(float relativeChange, float newMultiplier)
+    {
+        if (LinkKey == null || !LinkedControllers.TryGetValue(LinkKey, out List<CompanionDragController>? controllers))
+            return;
+
+        Vector2 anchor = LinkedAnchors.GetValueOrDefault(LinkKey);
+        foreach (CompanionDragController controller in controllers)
+        {
+            if (controller.GetParent() is not Node2D member)
+                continue;
+            member.Scale *= relativeChange;
+            member.GlobalPosition = anchor + controller.LinkOffset * newMultiplier;
+            controller.scaleMultiplier = newMultiplier;
+        }
+    }
+
+    private void SaveLinkedPosition(Node2D visuals, Vector2 anchor)
+    {
+        if (companionKey == null)
+            return;
+        Vector2 viewportSize = visuals.GetViewportRect().Size;
+        if (viewportSize.X > 0f && viewportSize.Y > 0f)
+            SavedNormalizedPositions[companionKey] = new Vector2(anchor.X / viewportSize.X, anchor.Y / viewportSize.Y);
     }
 
     private void SavePosition(Node2D visuals)

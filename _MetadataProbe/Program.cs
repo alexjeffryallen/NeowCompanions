@@ -1,6 +1,22 @@
 using System.Reflection;
 
 Assembly asm = Assembly.LoadFrom(@"C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\sts2.dll");
+if (args.FirstOrDefault() == "--members")
+{
+    foreach (string fullName in args.Skip(1))
+    {
+        Type? type = asm.GetType(fullName);
+        Console.WriteLine($"TYPE {type?.FullName ?? "MISSING"}");
+        if (type == null) continue;
+        foreach (ConstructorInfo ctor in type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            Console.WriteLine($"  CTOR({string.Join(", ", ctor.GetParameters().Select(p => p.ParameterType.FullName + " " + p.Name))})");
+        foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+            Console.WriteLine($"  METHOD {method.ReturnType.FullName} {method.Name}({string.Join(", ", method.GetParameters().Select(p => p.ParameterType.FullName + " " + p.Name))})");
+        foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
+            Console.WriteLine($"  PROP {property.PropertyType.FullName} {property.Name}");
+    }
+    return;
+}
 if (args.FirstOrDefault() == "--strings")
 {
     foreach (string typeName in args.Skip(1))
@@ -58,6 +74,25 @@ if (args.FirstOrDefault() == "--monster-types")
     Type monsterBase = asm.GetTypes().Single(type => type.Name == "MonsterModel");
     foreach (Type type in asm.GetTypes().Where(type => !type.IsAbstract && monsterBase.IsAssignableFrom(type)).OrderBy(type => type.Name))
         Console.WriteLine(type.FullName);
+    return;
+}
+if (args.FirstOrDefault() == "--monster-roster")
+{
+    Type monsterBase = asm.GetTypes().Single(type => type.Name == "MonsterModel");
+    foreach (Type type in asm.GetTypes().Where(type => !type.IsAbstract && monsterBase.IsAssignableFrom(type)).OrderBy(type => type.Name))
+    {
+        try
+        {
+            object? instance = Activator.CreateInstance(type);
+            bool shown = (bool)(type.GetProperty("ShouldShowInCompendium")?.GetValue(instance) ?? false);
+            string visuals = (string?)(type.GetProperty("VisualsPath")?.GetValue(instance)) ?? "";
+            Console.WriteLine($"{type.Name}\t{shown}\t{visuals}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{type.Name}\tERROR\t{ex.GetType().Name}");
+        }
+    }
     return;
 }
 if (args.FirstOrDefault() == "--ui")

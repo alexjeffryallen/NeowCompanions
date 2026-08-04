@@ -12,7 +12,7 @@ using MegaCrit.Sts2.Core.Nodes.Combat;
 
 namespace NeowCompanions.NeowCompanionsCode.Models;
 
-public sealed class SoulFyshPipPet : CustomMonsterModel
+public sealed class SoulFyshPipPet : SourceMonsterCompanionPet<SoulFysh>
 {
     private const float PetScale = 0.35f;
 
@@ -21,6 +21,8 @@ public sealed class SoulFyshPipPet : CustomMonsterModel
     public override int MaxInitialHp => 9999;
 
     public override bool IsHealthBarVisible => false;
+
+    public override IEnumerable<string> AssetPaths => ModelDb.Monster<SoulFysh>().AssetPaths;
 
     public override NCreatureVisuals? CreateCustomVisuals()
     {

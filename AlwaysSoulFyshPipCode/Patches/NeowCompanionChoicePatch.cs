@@ -15,6 +15,7 @@ using MegaCrit.Sts2.Core.Events;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Acts;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Events;
 using MegaCrit.Sts2.Core.Models.Relics;
@@ -24,6 +25,8 @@ namespace NeowCompanions.NeowCompanionsCode.Patches;
 
 public static class NeowCompanionChoicePatch
 {
+    internal sealed record CompanionPoolConfigEntry(string Name, Type CardType);
+
 
     private static readonly FieldInfo? EventOptionOnChosenField =
         AccessTools.Field(typeof(EventOption), "<OnChosen>k__BackingField");
@@ -37,7 +40,7 @@ public static class NeowCompanionChoicePatch
 
     internal static int ActiveCompanionOptionCount => ActiveCompanionOptionTexts?.Count ?? 0;
 
-    private sealed class CompanionOption
+    internal sealed class CompanionOption
     {
         public CompanionKind Kind { get; }
         public string DebugName { get; }
@@ -97,6 +100,55 @@ public static class NeowCompanionChoicePatch
             CompanionKind.KnightGang => "KNIGHT_GANG.title",
             CompanionKind.MechaKnight => "MECHA_KNIGHT.title",
             CompanionKind.SoulNexus => "SOUL_NEXUS.title",
+            CompanionKind.AssassinRubyRaider => "ASSASSIN_RUBY_RAIDER.title",
+            CompanionKind.AxeRubyRaider => "AXE_RUBY_RAIDER.title",
+            CompanionKind.BruteRubyRaider => "BRUTE_RUBY_RAIDER.title",
+            CompanionKind.CrossbowRubyRaider => "CROSSBOW_RUBY_RAIDER.title",
+            CompanionKind.Flyconid => "FLYCONID.title",
+            CompanionKind.Fogmog => "FOGMOG.title",
+            CompanionKind.Mawler => "MAWLER.title",
+            CompanionKind.FuzzyWurmCrawler => "FUZZY_WURM_CRAWLER.title",
+            CompanionKind.Inklet => "INKLET.title",
+            CompanionKind.SnappingJaxfruit => "SNAPPING_JAXFRUIT.title",
+            CompanionKind.SlitheringStrangler => "SLITHERING_STRANGLER.title",
+            CompanionKind.LeafSlimeS => "LEAF_SLIME_S.title",
+            CompanionKind.LeafSlimeM => "LEAF_SLIME_M.title",
+            CompanionKind.TwigSlimeS => "TWIG_SLIME_S.title",
+            CompanionKind.TwigSlimeM => "TWIG_SLIME_M.title",
+            CompanionKind.VineShambler => "VINE_SHAMBLER.title",
+            CompanionKind.Chomper => "CHOMPER.title",
+            CompanionKind.CubexConstruct => "CUBEX_CONSTRUCT.title",
+            CompanionKind.DampCultist => "DAMP_CULTIST.title",
+            CompanionKind.CalcifiedCultist => "CALCIFIED_CULTIST.title",
+            CompanionKind.CorpseSlug => "CORPSE_SLUG.title",
+            CompanionKind.TwoTailedRat => "TWO_TAILED_RAT.title",
+            CompanionKind.SewerClam => "SEWER_CLAM.title",
+            CompanionKind.HauntedShip => "HAUNTED_SHIP.title",
+            CompanionKind.SludgeSpinner => "SLUDGE_SPINNER.title",
+            CompanionKind.PunchConstruct => "PUNCH_CONSTRUCT.title",
+            CompanionKind.FossilStalker => "FOSSIL_STALKER.title",
+            CompanionKind.LivingFog => "LIVING_FOG.title",
+            CompanionKind.Parafright => "PARAFRIGHT.title",
+            CompanionKind.Tunneler => "TUNNELER.title",
+            CompanionKind.SpinyToad => "SPINY_TOAD.title",
+            CompanionKind.Stabbot => "STABBOT.title",
+            CompanionKind.HunterKiller => "HUNTER_KILLER.title",
+            CompanionKind.TorchHeadAmalgam => "TORCH_HEAD_AMALGAM.title",
+            CompanionKind.BowlbugEgg => "BOWLBUG_EGG.title",
+            CompanionKind.BowlbugNectar => "BOWLBUG_NECTAR.title",
+            CompanionKind.BowlbugRock => "BOWLBUG_ROCK.title",
+            CompanionKind.BowlbugSilk => "BOWLBUG_SILK.title",
+            CompanionKind.LouseProgenitor => "LOUSE_PROGENITOR.title",
+            CompanionKind.SlumberingBeetle => "SLUMBERING_BEETLE.title",
+            CompanionKind.Axebot => "AXEBOT.title", CompanionKind.BattleFriendV1 => "BATTLE_FRIEND_V1.title", CompanionKind.BattleFriendV2 => "BATTLE_FRIEND_V2.title", CompanionKind.BattleFriendV3 => "BATTLE_FRIEND_V3.title",
+            CompanionKind.Crusher => "CRUSHER.title", CompanionKind.DevotedSculptor => "DEVOTED_SCULPTOR.title", CompanionKind.Exoskeleton => "EXOSKELETON.title",
+            CompanionKind.Fabricator => "FABRICATOR.title", CompanionKind.FlailKnight => "FLAIL_KNIGHT.title", CompanionKind.FrogKnight => "FROG_KNIGHT.title", CompanionKind.GasBomb => "GAS_BOMB.title",
+            CompanionKind.GlobeHead => "GLOBE_HEAD.title", CompanionKind.Guardbot => "GUARDBOT.title", CompanionKind.LivingShield => "LIVING_SHIELD.title", CompanionKind.MagiKnight => "MAGI_KNIGHT.title",
+            CompanionKind.MysteriousKnight => "MYSTERIOUS_KNIGHT.title", CompanionKind.Myte => "MYTE.title", CompanionKind.Nibbit => "NIBBIT.title", CompanionKind.Noisebot => "NOISEBOT.title",
+            CompanionKind.Ovicopter => "OVICOPTER.title", CompanionKind.OwlMagistrate => "OWL_MAGISTRATE.title", CompanionKind.PaelsLegion => "PAELS_LEGION.title", CompanionKind.Rocket => "ROCKET.title",
+            CompanionKind.ScrollOfBiting => "SCROLL_OF_BITING.title", CompanionKind.SlimedBerserker => "SLIMED_BERSERKER.title", CompanionKind.TheForgotten => "THE_FORGOTTEN.title", CompanionKind.TheLost => "THE_LOST.title",
+            CompanionKind.TheObscura => "THE_OBSCURA.title", CompanionKind.Toadpole => "TOADPOLE.title", CompanionKind.ToughEgg => "TOUGH_EGG.title", CompanionKind.TrackerRubyRaider => "TRACKER_RUBY_RAIDER.title",
+            CompanionKind.TurretOperator => "TURRET_OPERATOR.title", CompanionKind.Zapbot => "ZAPBOT.title",
             _ => "CHOOSE_COMPANION.title"
         };
 
@@ -145,6 +197,55 @@ public static class NeowCompanionChoicePatch
             CompanionKind.KnightGang => "KNIGHT_GANG.description",
             CompanionKind.MechaKnight => "MECHA_KNIGHT.description",
             CompanionKind.SoulNexus => "SOUL_NEXUS.description",
+            CompanionKind.AssassinRubyRaider => "ASSASSIN_RUBY_RAIDER.description",
+            CompanionKind.AxeRubyRaider => "AXE_RUBY_RAIDER.description",
+            CompanionKind.BruteRubyRaider => "BRUTE_RUBY_RAIDER.description",
+            CompanionKind.CrossbowRubyRaider => "CROSSBOW_RUBY_RAIDER.description",
+            CompanionKind.Flyconid => "FLYCONID.description",
+            CompanionKind.Fogmog => "FOGMOG.description",
+            CompanionKind.Mawler => "MAWLER.description",
+            CompanionKind.FuzzyWurmCrawler => "FUZZY_WURM_CRAWLER.description",
+            CompanionKind.Inklet => "INKLET.description",
+            CompanionKind.SnappingJaxfruit => "SNAPPING_JAXFRUIT.description",
+            CompanionKind.SlitheringStrangler => "SLITHERING_STRANGLER.description",
+            CompanionKind.LeafSlimeS => "LEAF_SLIME_S.description",
+            CompanionKind.LeafSlimeM => "LEAF_SLIME_M.description",
+            CompanionKind.TwigSlimeS => "TWIG_SLIME_S.description",
+            CompanionKind.TwigSlimeM => "TWIG_SLIME_M.description",
+            CompanionKind.VineShambler => "VINE_SHAMBLER.description",
+            CompanionKind.Chomper => "CHOMPER.description",
+            CompanionKind.CubexConstruct => "CUBEX_CONSTRUCT.description",
+            CompanionKind.DampCultist => "DAMP_CULTIST.description",
+            CompanionKind.CalcifiedCultist => "CALCIFIED_CULTIST.description",
+            CompanionKind.CorpseSlug => "CORPSE_SLUG.description",
+            CompanionKind.TwoTailedRat => "TWO_TAILED_RAT.description",
+            CompanionKind.SewerClam => "SEWER_CLAM.description",
+            CompanionKind.HauntedShip => "HAUNTED_SHIP.description",
+            CompanionKind.SludgeSpinner => "SLUDGE_SPINNER.description",
+            CompanionKind.PunchConstruct => "PUNCH_CONSTRUCT.description",
+            CompanionKind.FossilStalker => "FOSSIL_STALKER.description",
+            CompanionKind.LivingFog => "LIVING_FOG.description",
+            CompanionKind.Parafright => "PARAFRIGHT.description",
+            CompanionKind.Tunneler => "TUNNELER.description",
+            CompanionKind.SpinyToad => "SPINY_TOAD.description",
+            CompanionKind.Stabbot => "STABBOT.description",
+            CompanionKind.HunterKiller => "HUNTER_KILLER.description",
+            CompanionKind.TorchHeadAmalgam => "TORCH_HEAD_AMALGAM.description",
+            CompanionKind.BowlbugEgg => "BOWLBUG_EGG.description",
+            CompanionKind.BowlbugNectar => "BOWLBUG_NECTAR.description",
+            CompanionKind.BowlbugRock => "BOWLBUG_ROCK.description",
+            CompanionKind.BowlbugSilk => "BOWLBUG_SILK.description",
+            CompanionKind.LouseProgenitor => "LOUSE_PROGENITOR.description",
+            CompanionKind.SlumberingBeetle => "SLUMBERING_BEETLE.description",
+            CompanionKind.Axebot => "AXEBOT.description", CompanionKind.BattleFriendV1 => "BATTLE_FRIEND_V1.description", CompanionKind.BattleFriendV2 => "BATTLE_FRIEND_V2.description", CompanionKind.BattleFriendV3 => "BATTLE_FRIEND_V3.description",
+            CompanionKind.Crusher => "CRUSHER.description", CompanionKind.DevotedSculptor => "DEVOTED_SCULPTOR.description", CompanionKind.Exoskeleton => "EXOSKELETON.description",
+            CompanionKind.Fabricator => "FABRICATOR.description", CompanionKind.FlailKnight => "FLAIL_KNIGHT.description", CompanionKind.FrogKnight => "FROG_KNIGHT.description", CompanionKind.GasBomb => "GAS_BOMB.description",
+            CompanionKind.GlobeHead => "GLOBE_HEAD.description", CompanionKind.Guardbot => "GUARDBOT.description", CompanionKind.LivingShield => "LIVING_SHIELD.description", CompanionKind.MagiKnight => "MAGI_KNIGHT.description",
+            CompanionKind.MysteriousKnight => "MYSTERIOUS_KNIGHT.description", CompanionKind.Myte => "MYTE.description", CompanionKind.Nibbit => "NIBBIT.description", CompanionKind.Noisebot => "NOISEBOT.description",
+            CompanionKind.Ovicopter => "OVICOPTER.description", CompanionKind.OwlMagistrate => "OWL_MAGISTRATE.description", CompanionKind.PaelsLegion => "PAELS_LEGION.description", CompanionKind.Rocket => "ROCKET.description",
+            CompanionKind.ScrollOfBiting => "SCROLL_OF_BITING.description", CompanionKind.SlimedBerserker => "SLIMED_BERSERKER.description", CompanionKind.TheForgotten => "THE_FORGOTTEN.description", CompanionKind.TheLost => "THE_LOST.description",
+            CompanionKind.TheObscura => "THE_OBSCURA.description", CompanionKind.Toadpole => "TOADPOLE.description", CompanionKind.ToughEgg => "TOUGH_EGG.description", CompanionKind.TrackerRubyRaider => "TRACKER_RUBY_RAIDER.description",
+            CompanionKind.TurretOperator => "TURRET_OPERATOR.description", CompanionKind.Zapbot => "ZAPBOT.description",
             _ => "CHOOSE_COMPANION.description"
         };
     }
@@ -193,84 +294,221 @@ public static class NeowCompanionChoicePatch
         new CompanionOption(CompanionKind.InfestedPrism, "Infested Prism", typeof(InfestedPrismRelic), typeof(InfestedPrismCard)),
         new CompanionOption(CompanionKind.KnightGang, "Knight Gang", typeof(KnightGangRelic), typeof(KnightGangCard)),
         new CompanionOption(CompanionKind.MechaKnight, "Mecha Knight", typeof(MechaKnightRelic), typeof(MechaKnightCard)),
-        new CompanionOption(CompanionKind.SoulNexus, "Soul Nexus", typeof(SoulNexusRelic), typeof(SoulNexusCard))
+        new CompanionOption(CompanionKind.SoulNexus, "Soul Nexus", typeof(SoulNexusRelic), typeof(SoulNexusCard)),
+        new CompanionOption(CompanionKind.AssassinRubyRaider, "Assassin Ruby Raider", typeof(AssassinRubyRaiderRelic), typeof(AssassinRubyRaiderCard)),
+        new CompanionOption(CompanionKind.AxeRubyRaider, "Axe Ruby Raider", typeof(AxeRubyRaiderRelic), typeof(AxeRubyRaiderCard)),
+        new CompanionOption(CompanionKind.BruteRubyRaider, "Brute Ruby Raider", typeof(BruteRubyRaiderRelic), typeof(BruteRubyRaiderCard)),
+        new CompanionOption(CompanionKind.CrossbowRubyRaider, "Crossbow Ruby Raider", typeof(CrossbowRubyRaiderRelic), typeof(CrossbowRubyRaiderCard)),
+        new CompanionOption(CompanionKind.Flyconid, "Flyconid", typeof(FlyconidRelic), typeof(FlyconidCard)),
+        new CompanionOption(CompanionKind.Fogmog, "Fogmog", typeof(FogmogRelic), typeof(FogmogCard)),
+        new CompanionOption(CompanionKind.Mawler, "Mawler", typeof(MawlerRelic), typeof(MawlerCard)),
+        new CompanionOption(CompanionKind.FuzzyWurmCrawler, "Fuzzy Wurm Crawler", typeof(FuzzyWurmCrawlerRelic), typeof(FuzzyWurmCrawlerCard)),
+        new CompanionOption(CompanionKind.Inklet, "Inklet", typeof(InkletRelic), typeof(InkletCard)),
+        new CompanionOption(CompanionKind.SnappingJaxfruit, "Snapping Jaxfruit", typeof(SnappingJaxfruitRelic), typeof(SnappingJaxfruitCard)),
+        new CompanionOption(CompanionKind.SlitheringStrangler, "Slithering Strangler", typeof(SlitheringStranglerRelic), typeof(SlitheringStranglerCard)),
+        new CompanionOption(CompanionKind.LeafSlimeS, "Small Leaf Slime", typeof(LeafSlimeSRelic), typeof(LeafSlimeSCard)),
+        new CompanionOption(CompanionKind.LeafSlimeM, "Medium Leaf Slime", typeof(LeafSlimeMRelic), typeof(LeafSlimeMCard)),
+        new CompanionOption(CompanionKind.TwigSlimeS, "Small Twig Slime", typeof(TwigSlimeSRelic), typeof(TwigSlimeSCard)),
+        new CompanionOption(CompanionKind.TwigSlimeM, "Medium Twig Slime", typeof(TwigSlimeMRelic), typeof(TwigSlimeMCard)),
+        new CompanionOption(CompanionKind.VineShambler, "Vine Shambler", typeof(VineShamblerRelic), typeof(VineShamblerCard)),
+        new CompanionOption(CompanionKind.Chomper, "Chomper", typeof(ChomperRelic), typeof(ChomperCard)),
+        new CompanionOption(CompanionKind.CubexConstruct, "Cubex Construct", typeof(CubexConstructRelic), typeof(CubexConstructCard)),
+        new CompanionOption(CompanionKind.DampCultist, "Damp Cultist", typeof(DampCultistRelic), typeof(DampCultistCard)),
+        new CompanionOption(CompanionKind.CalcifiedCultist, "Calcified Cultist", typeof(CalcifiedCultistRelic), typeof(CalcifiedCultistCard)),
+        new CompanionOption(CompanionKind.CorpseSlug, "Corpse Slug", typeof(CorpseSlugRelic), typeof(CorpseSlugCard)),
+        new CompanionOption(CompanionKind.TwoTailedRat, "Two-Tailed Rat", typeof(TwoTailedRatRelic), typeof(TwoTailedRatCard)),
+        new CompanionOption(CompanionKind.SewerClam, "Sewer Clam", typeof(SewerClamRelic), typeof(SewerClamCard)),
+        new CompanionOption(CompanionKind.HauntedShip, "Haunted Ship", typeof(HauntedShipRelic), typeof(HauntedShipCard)),
+        new CompanionOption(CompanionKind.SludgeSpinner, "Sludge Spinner", typeof(SludgeSpinnerRelic), typeof(SludgeSpinnerCard)),
+        new CompanionOption(CompanionKind.PunchConstruct, "Punch Construct", typeof(PunchConstructRelic), typeof(PunchConstructCard)),
+        new CompanionOption(CompanionKind.FossilStalker, "Fossil Stalker", typeof(FossilStalkerRelic), typeof(FossilStalkerCard)),
+        new CompanionOption(CompanionKind.LivingFog, "Living Fog", typeof(LivingFogRelic), typeof(LivingFogCard)),
+        new CompanionOption(CompanionKind.Parafright, "Parafright", typeof(ParafrightRelic), typeof(ParafrightCard)),
+        new CompanionOption(CompanionKind.Tunneler, "Tunneler", typeof(TunnelerRelic), typeof(TunnelerCard)),
+        new CompanionOption(CompanionKind.SpinyToad, "Spiny Toad", typeof(SpinyToadRelic), typeof(SpinyToadCard)),
+        new CompanionOption(CompanionKind.Stabbot, "Stabbot", typeof(StabbotRelic), typeof(StabbotCard)),
+        new CompanionOption(CompanionKind.HunterKiller, "Hunter Killer", typeof(HunterKillerRelic), typeof(HunterKillerCard)),
+        new CompanionOption(CompanionKind.TorchHeadAmalgam, "Torch Head Amalgam", typeof(TorchHeadAmalgamRelic), typeof(TorchHeadAmalgamCard)),
+        new CompanionOption(CompanionKind.BowlbugEgg, "Egg Bowlbug", typeof(BowlbugEggRelic), typeof(BowlbugEggCard)),
+        new CompanionOption(CompanionKind.BowlbugNectar, "Nectar Bowlbug", typeof(BowlbugNectarRelic), typeof(BowlbugNectarCard)),
+        new CompanionOption(CompanionKind.BowlbugRock, "Rock Bowlbug", typeof(BowlbugRockRelic), typeof(BowlbugRockCard)),
+        new CompanionOption(CompanionKind.BowlbugSilk, "Silk Bowlbug", typeof(BowlbugSilkRelic), typeof(BowlbugSilkCard)),
+        new CompanionOption(CompanionKind.LouseProgenitor, "Louse Progenitor", typeof(LouseProgenitorRelic), typeof(LouseProgenitorCard)),
+        new CompanionOption(CompanionKind.SlumberingBeetle, "Slumbering Beetle", typeof(SlumberingBeetleRelic), typeof(SlumberingBeetleCard)),
+        new CompanionOption(CompanionKind.Axebot, "Axebot", typeof(AxebotRelic), typeof(AxebotCard)),
+        new CompanionOption(CompanionKind.BattleFriendV1, "Battle Friend V1", typeof(BattleFriendV1Relic), typeof(BattleFriendV1Card)),
+        new CompanionOption(CompanionKind.BattleFriendV2, "Battle Friend V2", typeof(BattleFriendV2Relic), typeof(BattleFriendV2Card)),
+        new CompanionOption(CompanionKind.BattleFriendV3, "Battle Friend V3", typeof(BattleFriendV3Relic), typeof(BattleFriendV3Card)),
+        new CompanionOption(CompanionKind.DevotedSculptor, "Devoted Sculptor", typeof(DevotedSculptorRelic), typeof(DevotedSculptorCard)),
+        new CompanionOption(CompanionKind.Exoskeleton, "Exoskeleton", typeof(ExoskeletonRelic), typeof(ExoskeletonCard)),
+        new CompanionOption(CompanionKind.Fabricator, "Fabricator", typeof(FabricatorRelic), typeof(FabricatorCard)),
+        new CompanionOption(CompanionKind.FlailKnight, "Flail Knight", typeof(FlailKnightRelic), typeof(FlailKnightCard)),
+        new CompanionOption(CompanionKind.FrogKnight, "Frog Knight", typeof(FrogKnightRelic), typeof(FrogKnightCard)),
+        new CompanionOption(CompanionKind.GasBomb, "Gas Bomb", typeof(GasBombRelic), typeof(GasBombCard)),
+        new CompanionOption(CompanionKind.GlobeHead, "Globe Head", typeof(GlobeHeadRelic), typeof(GlobeHeadCard)),
+        new CompanionOption(CompanionKind.Guardbot, "Guardbot", typeof(GuardbotRelic), typeof(GuardbotCard)),
+        new CompanionOption(CompanionKind.LivingShield, "Living Shield", typeof(LivingShieldRelic), typeof(LivingShieldCard)),
+        new CompanionOption(CompanionKind.MagiKnight, "Magi Knight", typeof(MagiKnightRelic), typeof(MagiKnightCard)),
+        new CompanionOption(CompanionKind.MysteriousKnight, "Mysterious Knight", typeof(MysteriousKnightRelic), typeof(MysteriousKnightCard)),
+        new CompanionOption(CompanionKind.Myte, "Myte", typeof(MyteRelic), typeof(MyteCard)),
+        new CompanionOption(CompanionKind.Nibbit, "Nibbit", typeof(NibbitRelic), typeof(NibbitCard)),
+        new CompanionOption(CompanionKind.Noisebot, "Noisebot", typeof(NoisebotRelic), typeof(NoisebotCard)),
+        new CompanionOption(CompanionKind.Ovicopter, "Ovicopter", typeof(OvicopterRelic), typeof(OvicopterCard)),
+        new CompanionOption(CompanionKind.OwlMagistrate, "Owl Magistrate", typeof(OwlMagistrateRelic), typeof(OwlMagistrateCard)),
+        new CompanionOption(CompanionKind.PaelsLegion, "Pael's Legion", typeof(PaelsLegionRelic), typeof(PaelsLegionCard)),
+        new CompanionOption(CompanionKind.ScrollOfBiting, "Scroll of Biting", typeof(ScrollOfBitingRelic), typeof(ScrollOfBitingCard)),
+        new CompanionOption(CompanionKind.SlimedBerserker, "Slimed Berserker", typeof(SlimedBerserkerRelic), typeof(SlimedBerserkerCard)),
+        new CompanionOption(CompanionKind.TheForgotten, "The Forgotten", typeof(TheForgottenRelic), typeof(TheForgottenCard)),
+        new CompanionOption(CompanionKind.TheLost, "The Lost", typeof(TheLostRelic), typeof(TheLostCard)),
+        new CompanionOption(CompanionKind.TheObscura, "The Obscura", typeof(TheObscuraRelic), typeof(TheObscuraCard)),
+        new CompanionOption(CompanionKind.Toadpole, "Toadpole", typeof(ToadpoleRelic), typeof(ToadpoleCard)),
+        new CompanionOption(CompanionKind.ToughEgg, "Tough Egg", typeof(ToughEggRelic), typeof(ToughEggCard)),
+        new CompanionOption(CompanionKind.TrackerRubyRaider, "Tracker Ruby Raider", typeof(TrackerRubyRaiderRelic), typeof(TrackerRubyRaiderCard)),
+        new CompanionOption(CompanionKind.TurretOperator, "Turret Operator", typeof(TurretOperatorRelic), typeof(TurretOperatorCard)),
+        new CompanionOption(CompanionKind.Zapbot, "Zapbot", typeof(ZapbotRelic), typeof(ZapbotCard))
     ];
 
-    // Each base-game Ancient gets a compact pool with a mixture of high-impact,
-    // steady, and situational companion cards. Elite companions are distributed
-    // across these pools, and Aeonglass intentionally appears twice so every
-    // companion remains represented while pool sizes stay close.
-    private static readonly Dictionary<Type, HashSet<CompanionKind>> CompanionPoolsByAncient = new()
+    // Enemy companions follow the acts whose encounter tables contain that enemy.
+    // Enemies that occur in two acts are deliberately present in both pools.
+    private static readonly Dictionary<Type, HashSet<CompanionKind>> CompanionPoolsByAct = new()
     {
-        [typeof(Neow)] =
+        [typeof(Overgrowth)] =
         [
-            CompanionKind.Architect,
             CompanionKind.Byrdpip,
-            CompanionKind.Aeonglass,
-            CompanionKind.EmberPip,
-            CompanionKind.BygoneEffigy,
-            CompanionKind.Byrdonis
-        ],
-        [typeof(Darv)] =
-        [
-            CompanionKind.KaiserCrab,
-            CompanionKind.GremlinMerc,
-            CompanionKind.ThievingHopper,
+            CompanionKind.Wriggler,
+            CompanionKind.CeremonialBeast,
             CompanionKind.KinFollower,
-            CompanionKind.PhrogParasite
+            CompanionKind.EyeWithTeeth,
+            CompanionKind.TheKin,
+            CompanionKind.Vantom,
+            CompanionKind.BygoneEffigy,
+            CompanionKind.Byrdonis,
+            CompanionKind.PhrogParasite,
+            CompanionKind.ShrinkerBeetle,
+            CompanionKind.AssassinRubyRaider,
+            CompanionKind.AxeRubyRaider,
+            CompanionKind.BruteRubyRaider,
+            CompanionKind.CrossbowRubyRaider,
+            CompanionKind.Flyconid,
+            CompanionKind.Fogmog,
+            CompanionKind.FuzzyWurmCrawler,
+            CompanionKind.Inklet,
+            CompanionKind.Mawler,
+            CompanionKind.Nibbit,
+            CompanionKind.SnappingJaxfruit,
+            CompanionKind.SlitheringStrangler,
+            CompanionKind.LeafSlimeS,
+            CompanionKind.LeafSlimeM,
+            CompanionKind.TwigSlimeS,
+            CompanionKind.TwigSlimeM,
+            CompanionKind.VineShambler,
+            CompanionKind.TrackerRubyRaider,
+            CompanionKind.CubexConstruct
         ],
-        [typeof(Nonupeipe)] =
+        [typeof(Underdocks)] =
         [
-            CompanionKind.FrostPip,
-            CompanionKind.WaterfallGiant,
             CompanionKind.SoulFysh,
+            CompanionKind.GremlinMerc,
+            CompanionKind.LagavulinMatriarch,
+            CompanionKind.WaterfallGiant,
             CompanionKind.Seapunk,
             CompanionKind.SkulkingColony,
-            CompanionKind.PhantasmalGardener
+            CompanionKind.PhantasmalGardener,
+            CompanionKind.TerrorEel,
+            CompanionKind.DampCultist,
+            CompanionKind.CalcifiedCultist,
+            CompanionKind.CorpseSlug,
+            CompanionKind.TwoTailedRat,
+            CompanionKind.SewerClam,
+            CompanionKind.HauntedShip,
+            CompanionKind.SludgeSpinner,
+            CompanionKind.PunchConstruct,
+            CompanionKind.FossilStalker,
+            CompanionKind.LivingFog,
+            CompanionKind.Toadpole,
+            CompanionKind.GasBomb
         ],
-        [typeof(Orobas)] =
+        [typeof(Hive)] =
         [
-            CompanionKind.LagavulinMatriarch,
-            CompanionKind.Vantom,
-            CompanionKind.Wriggler,
-            CompanionKind.Operosis,
-            CompanionKind.TerrorEel
-        ],
-        [typeof(Pael)] =
-        [
-            CompanionKind.Queen,
-            CompanionKind.CeremonialBeast,
-            CompanionKind.TestSubject,
-            CompanionKind.Shadeleaf,
-            CompanionKind.Decimillipede,
-            CompanionKind.Entomancer
-        ],
-        [typeof(Tanx)] =
-        [
-            CompanionKind.ThornPip,
-            CompanionKind.TheInsatiable,
-            CompanionKind.EyeWithTeeth,
-            CompanionKind.ShrinkerBeetle,
-            CompanionKind.InfestedPrism
-        ],
-        [typeof(Tezcatara)] =
-        [
+            CompanionKind.ThievingHopper,
+            CompanionKind.KaiserCrab,
             CompanionKind.KnowledgeDemon,
-            CompanionKind.TheKin,
-            CompanionKind.Rustclad,
-            CompanionKind.GildedPage,
-            CompanionKind.KnightGang,
-            CompanionKind.MechaKnight
+            CompanionKind.TheInsatiable,
+            CompanionKind.Decimillipede,
+            CompanionKind.Entomancer,
+            CompanionKind.InfestedPrism,
+            CompanionKind.Chomper,
+            CompanionKind.BowlbugEgg,
+            CompanionKind.BowlbugNectar,
+            CompanionKind.BowlbugRock,
+            CompanionKind.BowlbugSilk,
+            CompanionKind.Crusher,
+            CompanionKind.Exoskeleton,
+            CompanionKind.HunterKiller,
+            CompanionKind.LouseProgenitor,
+            CompanionKind.Myte,
+            CompanionKind.Ovicopter,
+            CompanionKind.Parafright,
+            CompanionKind.Rocket,
+            CompanionKind.SlumberingBeetle,
+            CompanionKind.SpinyToad,
+            CompanionKind.TheObscura,
+            CompanionKind.ToughEgg,
+            CompanionKind.Tunneler
         ],
-        [typeof(Vakuu)] =
+        [typeof(Glory)] =
         [
-            CompanionKind.Glitchling,
-            CompanionKind.StormPip,
-            CompanionKind.Bonebinder,
             CompanionKind.Aeonglass,
-            CompanionKind.SoulNexus
+            CompanionKind.Queen,
+            CompanionKind.TestSubject,
+            CompanionKind.KnightGang,
+            CompanionKind.MechaKnight,
+            CompanionKind.SoulNexus,
+            CompanionKind.CubexConstruct,
+            CompanionKind.PunchConstruct,
+            CompanionKind.Stabbot,
+            CompanionKind.BattleFriendV1,
+            CompanionKind.BattleFriendV2,
+            CompanionKind.BattleFriendV3,
+            CompanionKind.Axebot,
+            CompanionKind.DevotedSculptor,
+            CompanionKind.Fabricator,
+            CompanionKind.FlailKnight,
+            CompanionKind.FrogKnight,
+            CompanionKind.GlobeHead,
+            CompanionKind.Guardbot,
+            CompanionKind.LivingShield,
+            CompanionKind.MagiKnight,
+            CompanionKind.MysteriousKnight,
+            CompanionKind.Noisebot,
+            CompanionKind.OwlMagistrate,
+            CompanionKind.PaelsLegion,
+            CompanionKind.ScrollOfBiting,
+            CompanionKind.SlimedBerserker,
+            CompanionKind.TheForgotten,
+            CompanionKind.TheLost,
+            CompanionKind.TorchHeadAmalgam,
+            CompanionKind.TurretOperator,
+            CompanionKind.Zapbot
         ]
     };
+
+    // These companions are not sourced from an act encounter, so they remain
+    // available in every route instead of being assigned to a fictional spawn.
+    private static readonly HashSet<CompanionKind> UniversalCompanionPool =
+    [
+        CompanionKind.Architect,
+        CompanionKind.Operosis,
+        CompanionKind.Rustclad,
+        CompanionKind.Shadeleaf,
+        CompanionKind.Glitchling,
+        CompanionKind.Bonebinder,
+        CompanionKind.GildedPage,
+        CompanionKind.EmberPip,
+        CompanionKind.FrostPip,
+        CompanionKind.StormPip,
+        CompanionKind.ThornPip
+    ];
 
     public static void Postfix(AncientEventModel __instance, ref IReadOnlyList<EventOption> __result)
     {
@@ -374,7 +612,10 @@ public static class NeowCompanionChoicePatch
             }
 
             CardModel previewCard = GetCompanionCard(companion);
-            IHoverTip[] hoverTips = [HoverTipFactory.FromCard(previewCard, upgrade: false)];
+            IHoverTip[] hoverTips =
+            [
+                HoverTipFactory.FromCard(previewCard, upgrade: ModSettings.GrantUpgradedCompanionCards)
+            ];
 
             EventOption companionOption = new EventOption(
                 ancient,
@@ -447,7 +688,7 @@ public static class NeowCompanionChoicePatch
 
     private static List<CompanionOption> GetAvailableCompanions(AncientEventModel ancient)
     {
-        IEnumerable<CompanionOption> ancientPool = GetCompanionPoolForAncient(ancient);
+        IEnumerable<CompanionOption> ancientPool = GetCompanionPoolForCurrentAct(ancient);
         if (ancient.Owner == null)
         {
             return ancientPool.ToList();
@@ -458,21 +699,42 @@ public static class NeowCompanionChoicePatch
             .ToList();
     }
 
-    private static IEnumerable<CompanionOption> GetCompanionPoolForAncient(AncientEventModel ancient)
+    private static IEnumerable<CompanionOption> GetCompanionPoolForCurrentAct(AncientEventModel ancient)
     {
-        if (ModSettings.OfferAllCompanions)
+        if (ModSettings.FullStartingCompanionPool
+            && ancient is Neow
+            && ancient.Owner?.RunState.CurrentActIndex == 0)
         {
+            MainFile.Logger.Info("[NeowCompanions] Using the full companion pool for the starting Neow choice.");
             return CompanionPool;
         }
 
-        if (!CompanionPoolsByAncient.TryGetValue(ancient.GetType(), out HashSet<CompanionKind>? ancientPool))
+        Type? actType = ancient.Owner?.RunState.Act.GetType();
+        if (actType == null || !CompanionPoolsByAct.TryGetValue(actType, out HashSet<CompanionKind>? actPool))
         {
-            MainFile.Logger.Info($"[NeowCompanions] No dedicated pool for {ancient.GetType().Name}; using the full companion pool.");
+            MainFile.Logger.Info("[NeowCompanions] Current act could not be identified; using the full companion pool.");
             return CompanionPool;
         }
 
-        MainFile.Logger.Info($"[NeowCompanions] Using the dedicated {ancient.GetType().Name} companion pool.");
-        return CompanionPool.Where(companion => ancientPool.Contains(companion.Kind));
+        MainFile.Logger.Info($"[NeowCompanions] Using the {actType.Name} companion pool.");
+        return CompanionPool.Where(companion =>
+            actPool.Contains(companion.Kind) || UniversalCompanionPool.Contains(companion.Kind));
+    }
+
+    internal static IReadOnlyList<(string ActName, IReadOnlyList<CompanionPoolConfigEntry> Companions)>
+        GetCompanionPoolsForConfig()
+    {
+        return CompanionPoolsByAct
+            .Select(pair =>
+            {
+                IReadOnlyList<CompanionPoolConfigEntry> companions = CompanionPool
+                    .Where(companion => pair.Value.Contains(companion.Kind)
+                        || UniversalCompanionPool.Contains(companion.Kind))
+                    .Select(companion => new CompanionPoolConfigEntry(companion.DebugName, companion.CardType))
+                    .ToList();
+                return (pair.Key.Name, companions);
+            })
+            .ToList();
     }
 
     private static async Task ChooseCompanion(AncientEventModel ancient, CompanionOption companion, Func<Task> finishOriginalOption)
@@ -551,8 +813,16 @@ public static class NeowCompanionChoicePatch
 
     private static async Task AddCompanionCard(CompanionOption companion, MegaCrit.Sts2.Core.Entities.Players.Player owner)
     {
-        CardModel deckCard = owner.RunState.CreateCard(GetCompanionCard(companion), owner);
-        await CardPileCmd.Add(deckCard, PileType.Deck);
+        CardModel canonicalCard = GetCompanionCard(companion);
+        CardModel baseCard = owner.RunState.CreateCard(canonicalCard, owner);
+        await CardPileCmd.Add(baseCard, PileType.Deck);
+
+        if (ModSettings.GrantUpgradedCompanionCards && baseCard.IsUpgradable)
+        {
+            CardModel upgradedCard = owner.RunState.CreateCard(canonicalCard, owner);
+            CardCmd.Upgrade(upgradedCard);
+            await CardPileCmd.Add(upgradedCard, PileType.Deck);
+        }
     }
 
     private static CardModel GetCompanionCard(CompanionOption companion)
@@ -565,6 +835,7 @@ public static class NeowCompanionChoicePatch
         return canonicalCard as CardModel
             ?? throw new InvalidOperationException($"Companion card type '{companion.CardType.FullName}' did not produce a CardModel.");
     }
+
 
     private static void InvokeSetEventState(AncientEventModel ancient, LocString description, IReadOnlyList<EventOption> options)
     {
@@ -600,7 +871,10 @@ public static class NeowCompanionScrollableOptionsPatch
 
         if (optionsContainer.GetParent() is ScrollContainer existingScroll)
         {
-            existingScroll.ScrollVertical = 0;
+            // Multi-pick rebuilds the option buttons inside the same scroll container.
+            // Keep its current position and prevent the newly focused first button from
+            // dragging the view back to the top.
+            existingScroll.FollowFocus = false;
             return;
         }
 
@@ -621,7 +895,7 @@ public static class NeowCompanionScrollableOptionsPatch
             SizeFlagsVertical = Control.SizeFlags.ShrinkBegin,
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
             VerticalScrollMode = ScrollContainer.ScrollMode.Auto,
-            FollowFocus = true
+            FollowFocus = false
         };
 
         parent.AddChild(scroll);

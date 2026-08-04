@@ -232,7 +232,7 @@ public sealed class ThievingHopperRelic : CompanionRelicModel
     }
 }
 
-public sealed class WrigglerPet : CustomMonsterModel
+public sealed class WrigglerPet : SourceMonsterCompanionPet<Wriggler>
 {
     private const float PetScale = 0.90f;
 
@@ -241,6 +241,8 @@ public sealed class WrigglerPet : CustomMonsterModel
     public override int MaxInitialHp => 9999;
 
     public override bool IsHealthBarVisible => false;
+
+    public override IEnumerable<string> AssetPaths => ModelDb.Monster<Wriggler>().AssetPaths;
 
     public override MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals? CreateCustomVisuals()
     {
@@ -268,7 +270,7 @@ public sealed class WrigglerPet : CustomMonsterModel
     }
 }
 
-public sealed class EyeWithTeethPet : CustomMonsterModel
+public sealed class EyeWithTeethPet : SourceMonsterCompanionPet<EyeWithTeeth>
 {
     private const float PetScale = 0.60f;
 
@@ -277,6 +279,8 @@ public sealed class EyeWithTeethPet : CustomMonsterModel
     public override int MaxInitialHp => 9999;
 
     public override bool IsHealthBarVisible => false;
+
+    public override IEnumerable<string> AssetPaths => ModelDb.Monster<EyeWithTeeth>().AssetPaths;
 
     public override MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals? CreateCustomVisuals()
     {
@@ -304,7 +308,7 @@ public sealed class EyeWithTeethPet : CustomMonsterModel
     }
 }
 
-public sealed class GremlinMercPet : CustomMonsterModel
+public sealed class GremlinMercPet : SourceMonsterCompanionPet<GremlinMerc>
 {
     private const float PetScale = 0.70f;
 
@@ -313,6 +317,8 @@ public sealed class GremlinMercPet : CustomMonsterModel
     public override int MaxInitialHp => 9999;
 
     public override bool IsHealthBarVisible => false;
+
+    public override IEnumerable<string> AssetPaths => ModelDb.Monster<GremlinMerc>().AssetPaths;
 
     public override MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals? CreateCustomVisuals()
     {
@@ -340,7 +346,7 @@ public sealed class GremlinMercPet : CustomMonsterModel
     }
 }
 
-public sealed class FatGremlinSplitPet : CustomMonsterModel
+public sealed class FatGremlinSplitPet : SourceMonsterCompanionPet<FatGremlin>
 {
     private const float PetScale = 0.70f;
 
@@ -349,6 +355,8 @@ public sealed class FatGremlinSplitPet : CustomMonsterModel
     public override int MaxInitialHp => 9999;
 
     public override bool IsHealthBarVisible => false;
+
+    public override IEnumerable<string> AssetPaths => ModelDb.Monster<FatGremlin>().AssetPaths;
 
     public override MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals? CreateCustomVisuals()
     {
@@ -377,7 +385,7 @@ public sealed class FatGremlinSplitPet : CustomMonsterModel
     }
 }
 
-public sealed class SneakyGremlinSplitPet : CustomMonsterModel
+public sealed class SneakyGremlinSplitPet : SourceMonsterCompanionPet<SneakyGremlin>
 {
     private const float PetScale = 0.70f;
 
@@ -386,6 +394,8 @@ public sealed class SneakyGremlinSplitPet : CustomMonsterModel
     public override int MaxInitialHp => 9999;
 
     public override bool IsHealthBarVisible => false;
+
+    public override IEnumerable<string> AssetPaths => ModelDb.Monster<SneakyGremlin>().AssetPaths;
 
     public override MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals? CreateCustomVisuals()
     {
@@ -414,7 +424,7 @@ public sealed class SneakyGremlinSplitPet : CustomMonsterModel
     }
 }
 
-public sealed class ThievingHopperPet : CustomMonsterModel
+public sealed class ThievingHopperPet : SourceMonsterCompanionPet<ThievingHopper>
 {
     private const float PetScale = 0.65f;
 
@@ -423,6 +433,8 @@ public sealed class ThievingHopperPet : CustomMonsterModel
     public override int MaxInitialHp => 9999;
 
     public override bool IsHealthBarVisible => false;
+
+    public override IEnumerable<string> AssetPaths => ModelDb.Monster<ThievingHopper>().AssetPaths;
 
     public override MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals? CreateCustomVisuals()
     {
@@ -450,7 +462,7 @@ public sealed class ThievingHopperPet : CustomMonsterModel
     }
 }
 
-public sealed class KinFollowerPet : CustomMonsterModel
+public sealed class KinFollowerPet : SourceMonsterCompanionPet<KinFollower>
 {
     private const float PetScale = 0.70f;
 
@@ -459,6 +471,8 @@ public sealed class KinFollowerPet : CustomMonsterModel
     public override int MaxInitialHp => 9999;
 
     public override bool IsHealthBarVisible => false;
+
+    public override IEnumerable<string> AssetPaths => ModelDb.Monster<KinFollower>().AssetPaths;
 
     public override MegaCrit.Sts2.Core.Nodes.Combat.NCreatureVisuals? CreateCustomVisuals()
     {
@@ -486,7 +500,7 @@ public sealed class KinFollowerPet : CustomMonsterModel
     }
 }
 
-public sealed class CeremonialBeastPet : CustomMonsterModel
+public sealed class CeremonialBeastPet : SourceMonsterCompanionPet<CeremonialBeast>
 {
     private const float PetScale = 0.35f;
 
@@ -495,6 +509,8 @@ public sealed class CeremonialBeastPet : CustomMonsterModel
     public override int MaxInitialHp => 9999;
 
     public override bool IsHealthBarVisible => false;
+
+    public override IEnumerable<string> AssetPaths => ModelDb.Monster<CeremonialBeast>().AssetPaths;
 
     public override bool ShouldFadeAfterDeath => false;
 

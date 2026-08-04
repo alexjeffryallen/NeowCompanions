@@ -4,15 +4,19 @@ using System.Linq;
 using System.Threading.Tasks;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
+using Godot;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.ValueProps;
 
 namespace NeowCompanions.NeowCompanionsCode.Models;
@@ -44,29 +48,46 @@ public sealed class BygoneEffigyCard : BossCompanionCard<BygoneEffigyPet>
     protected override string CompanionName => "Bygone Effigy";
     protected override string CardTitle => "Stone Vigil";
     protected override string CardArtFileName => "card_bygone_effigy.png";
-    public override bool GainsBlock => true;
+    public override TargetType TargetType =>
+        IsUpgraded ? TargetType.AllEnemies : TargetType.AnyEnemy;
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new SelfAwareBlockVar(9m, ValueProp.Move)
+        new IfUpgradedVar("IfUpgraded", 0m)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.FromPower<SlowPower>()
     ];
 
     public override List<(string, string)> Localization =>
     [
         ("title", CardTitle),
-        ("description", "Gain {Block:diff} Block."),
+        ("description", "Apply Slow to an enemy.{IfUpgraded:show: Targets ALL enemies.|}"),
         ("flavor", "The old stone remembers how to stand.")
     ];
 
-    public BygoneEffigyCard() : base(1, CardType.Skill, TargetType.Self) { }
+    public BygoneEffigyCard() : base(2, CardType.Skill, TargetType.AnyEnemy) { }
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
-        await EliteCompanionAnimation.Trigger<BygoneEffigyPet>(Owner, "Attack");
-        await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, cardPlay, false);
-    }
+        if (CombatState == null)
+            return;
 
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3m);
+        await EliteCompanionAnimation.Trigger<BygoneEffigyPet>(Owner, "Attack");
+
+        IReadOnlyList<Creature> targets = IsUpgraded
+            ? CombatState.HittableEnemies.Where(enemy => enemy.IsAlive).ToList()
+            : [cardPlay.Target ?? throw new ArgumentNullException(nameof(cardPlay.Target))];
+
+        await PowerCmd.Apply<SlowPower>(
+            choiceContext,
+            targets,
+            1m,
+            Owner.Creature,
+            this);
+    }
 }
 
 public sealed class BygoneEffigyPet : BossCompanionPet<BygoneEffigy>
@@ -90,18 +111,20 @@ public sealed class ByrdonisCard : BossCompanionCard<ByrdonisPet>
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(3m, DamageProps.card),
+        new DamageVar(2m, DamageProps.card),
         new RepeatVar(3)
     ];
+
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
 
     public override List<(string, string)> Localization =>
     [
         ("title", CardTitle),
-        ("description", "Deal {Damage:diff} damage {Repeat:diff} times."),
+        ("description", "Deal {Damage:diff} damage {Repeat:diff} times. If lethal, permanently add a hatchable Byrdonis Egg to your deck. Exhaust."),
         ("flavor", "A crown does not make the beak less sharp.")
     ];
 
-    public ByrdonisCard() : base(1, CardType.Attack, TargetType.AnyEnemy) { }
+    public ByrdonisCard() : base(0, CardType.Attack, TargetType.AnyEnemy) { }
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
@@ -111,9 +134,15 @@ public sealed class ByrdonisCard : BossCompanionCard<ByrdonisPet>
         {
             await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this, cardPlay);
         }
+
+        if (!cardPlay.Target.IsAlive)
+        {
+            CardModel egg = Owner.RunState.CreateCard(ModelDb.Card<MegaCrit.Sts2.Core.Models.Cards.ByrdonisEgg>(), Owner);
+            await CardPileCmd.Add(egg, PileType.Deck);
+        }
     }
 
-    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(1m);
+    protected override void OnUpgrade() => DynamicVars.Repeat.UpgradeValueBy(1m);
 }
 
 public sealed class ByrdonisPet : BossCompanionPet<Byrdonis>
@@ -135,10 +164,14 @@ public sealed class PhrogParasiteCard : BossCompanionCard<PhrogParasitePet>
     protected override string CardTitle => "Parasitic Lash";
     protected override string CardArtFileName => "card_phrog_parasite.png";
 
+    public override TargetType TargetType =>
+        IsUpgraded ? TargetType.AllEnemies : TargetType.AnyEnemy;
+
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DamageVar(7m, DamageProps.card),
-        new PowerVar<PoisonPower>(3m)
+        new PowerVar<PoisonPower>(3m),
+        new IfUpgradedVar("IfUpgraded", 0m)
     ];
 
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<PoisonPower>()];
@@ -146,25 +179,33 @@ public sealed class PhrogParasiteCard : BossCompanionCard<PhrogParasitePet>
     public override List<(string, string)> Localization =>
     [
         ("title", CardTitle),
-        ("description", "Deal {Damage:diff} damage. Apply {PoisonPower:diff} Poison."),
+        ("description", "Deal {Damage:diff} damage. Apply {PoisonPower:diff} Poison. Add an Infection to your hand.{IfUpgraded:show: Targets ALL enemies.|}"),
         ("flavor", "The tongue arrives before the appetite.")
     ];
 
-    public PhrogParasiteCard() : base(1, CardType.Attack, TargetType.AnyEnemy) { }
+    public PhrogParasiteCard() : base(0, CardType.Attack, TargetType.AnyEnemy) { }
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
-        ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
-        await EliteCompanionAnimation.Trigger<PhrogParasitePet>(Owner, "Attack");
-        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this, cardPlay);
-        await PowerCmd.Apply<PoisonPower>(
-            choiceContext, cardPlay.Target, DynamicVars.Poison.BaseValue, Owner.Creature, this);
-    }
+        if (CombatState == null)
+            return;
 
-    protected override void OnUpgrade()
-    {
-        DynamicVars.Damage.UpgradeValueBy(3m);
-        DynamicVars.Poison.UpgradeValueBy(1m);
+        await EliteCompanionAnimation.Trigger<PhrogParasitePet>(Owner, "Attack");
+
+        IReadOnlyList<Creature> targets = IsUpgraded
+            ? CombatState.HittableEnemies.Where(enemy => enemy.IsAlive).ToList()
+            : [cardPlay.Target ?? throw new ArgumentNullException(nameof(cardPlay.Target))];
+
+        foreach (Creature target in targets)
+        {
+            await CreatureCmd.Damage(choiceContext, target, DynamicVars.Damage, Owner.Creature, this, cardPlay);
+        }
+
+        await PowerCmd.Apply<PoisonPower>(
+            choiceContext, targets, DynamicVars.Poison.BaseValue, Owner.Creature, this);
+
+        CardModel infection = CombatState.CreateCard(ModelDb.Card<Infection>(), Owner);
+        await CardPileCmd.AddGeneratedCardToCombat(infection, PileType.Hand, Owner);
     }
 }
 
@@ -186,37 +227,40 @@ public sealed class SkulkingColonyCard : BossCompanionCard<SkulkingColonyPet>
     protected override string CompanionName => "Skulking Colony";
     protected override string CardTitle => "Colony Momentum";
     protected override string CardArtFileName => "card_skulking_colony.png";
-    public override bool GainsBlock => true;
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Ethereal];
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(7m, DamageProps.card),
-        new SelfAwareBlockVar(7m, ValueProp.Move)
+        new PowerVar<HardenedShellPower>(15m)
+    ];
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.FromPower<HardenedShellPower>()
     ];
 
     public override List<(string, string)> Localization =>
     [
         ("title", CardTitle),
-        ("description", "Deal {Damage:diff} damage. Gain {Block:diff} Block."),
+        ("description", "You can lose no more than {HardenedShellPower:diff} HP each turn. Ethereal."),
         ("flavor", "Every shell in the pile leans into the blow.")
     ];
 
-    public SkulkingColonyCard() : base(1, CardType.Attack, TargetType.AnyEnemy) { }
+    public SkulkingColonyCard() : base(3, CardType.Power, TargetType.Self) { }
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
-        ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
         await EliteCompanionAnimation.Trigger<SkulkingColonyPet>(
             Owner, "AttackDouble");
-        await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this, cardPlay);
-        await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, cardPlay, false);
+        await PowerCmd.Apply<HardenedShellPower>(
+            choiceContext,
+            Owner.Creature,
+            DynamicVars["HardenedShellPower"].BaseValue,
+            Owner.Creature,
+            this);
     }
 
-    protected override void OnUpgrade()
-    {
-        DynamicVars.Damage.UpgradeValueBy(2m);
-        DynamicVars.Block.UpgradeValueBy(2m);
-    }
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
 public sealed class SkulkingColonyPet : BossCompanionPet<SkulkingColony>
@@ -237,35 +281,51 @@ public sealed class PhantasmalGardenerCard : BossCompanionCard<PhantasmalGardene
     protected override string CompanionName => "Phantasmal Gardener";
     protected override string CardTitle => "Ghostly Overgrowth";
     protected override string CardArtFileName => "card_phantasmal_gardener.png";
-    public override bool GainsBlock => true;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new SelfAwareBlockVar(10m, ValueProp.Move),
-        new PowerVar<StrengthPower>(1m)
+        new DamageVar(1m, DamageProps.card),
+        new RepeatVar(3),
+        new DynamicVar("Replay", 1m)
     ];
 
-    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<StrengthPower>()];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.Static(StaticHoverTip.ReplayStatic)
+    ];
 
     public override List<(string, string)> Localization =>
     [
         ("title", CardTitle),
-        ("description", "Gain {Block:diff} Block and {StrengthPower:diff} Strength."),
+        ("description", "Deal {Damage:diff} damage {Repeat:diff} times. Add {Replay:diff} Replay to this card for the rest of combat."),
         ("flavor", "What it tends grows larger than memory.")
     ];
 
-    public PhantasmalGardenerCard() : base(1, CardType.Skill, TargetType.Self) { }
+    public PhantasmalGardenerCard() : base(1, CardType.Attack, TargetType.AnyEnemy) { }
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
-        await EliteCompanionAnimation.Trigger<PhantasmalGardenerPet>(Owner, "Cast");
-        await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, cardPlay, false);
-        await PowerCmd.Apply<StrengthPower>(
-            choiceContext, Owner.Creature, DynamicVars.Strength.BaseValue, Owner.Creature, this);
+        ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
+        await EliteCompanionAnimation.Trigger<PhantasmalGardenerPet>(Owner, "Attack", "Cast");
+
+        for (int i = 0; i < DynamicVars.Repeat.IntValue && cardPlay.Target.IsAlive; i++)
+        {
+            await CreatureCmd.Damage(
+                choiceContext,
+                cardPlay.Target,
+                DynamicVars.Damage,
+                Owner.Creature,
+                this,
+                cardPlay);
+        }
+
+        if (CurrentPlayIndex == 0)
+        {
+            BaseReplayCount += DynamicVars["Replay"].IntValue;
+        }
     }
 
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(4m);
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(1m);
 }
 
 public sealed class PhantasmalGardenerPet : BossCompanionPet<PhantasmalGardener>
@@ -289,38 +349,65 @@ public sealed class TerrorEelCard : BossCompanionCard<TerrorEelPet>
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(4m, DamageProps.card),
-        new RepeatVar(3),
-        new PowerVar<VulnerablePower>(1m)
+        new PowerVar<TerrorEelAmbushPower>(1m)
     ];
 
-    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<VulnerablePower>()];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.FromPower<TerrorEelAmbushPower>()
+    ];
 
     public override List<(string, string)> Localization =>
     [
         ("title", CardTitle),
-        ("description", "Deal {Damage:diff} damage {Repeat:diff} times. Apply {VulnerablePower:diff} Vulnerable."),
+        ("description", "Mark an enemy. When its HP falls below half, Stun it for 1 turn."),
         ("flavor", "The water panics first.")
     ];
 
-    public TerrorEelCard() : base(2, CardType.Attack, TargetType.AnyEnemy) { }
+    public TerrorEelCard() : base(3, CardType.Skill, TargetType.AnyEnemy) { }
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         ArgumentNullException.ThrowIfNull(cardPlay.Target, nameof(cardPlay.Target));
         await EliteCompanionAnimation.Trigger<TerrorEelPet>(Owner, "AttackTripleTrigger");
-        for (int i = 0; i < DynamicVars.Repeat.IntValue && cardPlay.Target.IsAlive; i++)
-        {
-            await CreatureCmd.Damage(choiceContext, cardPlay.Target, DynamicVars.Damage, Owner.Creature, this, cardPlay);
-        }
-        if (cardPlay.Target.IsAlive)
-        {
-            await PowerCmd.Apply<VulnerablePower>(
-                choiceContext, cardPlay.Target, DynamicVars.Vulnerable.BaseValue, Owner.Creature, this);
-        }
+        await PowerCmd.Apply<TerrorEelAmbushPower>(
+            choiceContext,
+            cardPlay.Target,
+            1m,
+            Owner.Creature,
+            this);
     }
 
-    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(1m);
+    protected override void OnUpgrade() => AddKeyword(CardKeyword.Retain);
+}
+
+public sealed class TerrorEelAmbushPower : CustomPowerModel
+{
+    public override PowerType Type => PowerType.Debuff;
+
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", "Terror Eel Ambush"),
+        ("description", "When this creature's HP falls below half, it is Stunned for 1 turn and this is removed.")
+    ];
+
+    public override async Task AfterDamageReceived(
+        PlayerChoiceContext choiceContext,
+        Creature target,
+        DamageResult result,
+        ValueProp props,
+        Creature? dealer,
+        CardModel? cardSource)
+    {
+        if (target != Owner || target.IsDead || target.CurrentHp * 2 >= target.MaxHp)
+            return;
+
+        Flash();
+        await CreatureCmd.Stun(target);
+        await PowerCmd.Remove(this);
+    }
 }
 
 public sealed class TerrorEelPet : BossCompanionPet<TerrorEel>
@@ -329,10 +416,23 @@ public sealed class TerrorEelPet : BossCompanionPet<TerrorEel>
 }
 
 [Pool(typeof(NeowCompanionRelicPool))]
-public sealed class DecimillipedeRelic : BossCompanionRelic<DecimillipedePet>
+public sealed class DecimillipedeRelic : CompanionRelicModel
 {
-    protected override string CompanionName => "Decimillipede";
-    protected override string RelicIconFileName => "relic_decimillipede.png";
+    public override string IconFileName => "relic_decimillipede.png";
+
+    public override List<(string, string)> Localization =>
+    [
+        ("title", "Decimillipede"),
+        ("description", "At the start of each combat, summon all three Decimillipede segments."),
+        ("flavor", "Every segment remembers the shape of the whole.")
+    ];
+
+    public override async Task BeforeCombatStart()
+    {
+        await PlayerCmd.AddPet<DecimillipedePet>(Owner);
+        await PlayerCmd.AddPet<DecimillipedeMiddlePet>(Owner);
+        await PlayerCmd.AddPet<DecimillipedeBackPet>(Owner);
+    }
 }
 
 [Pool(typeof(NeowCompanionCardPool))]
@@ -359,8 +459,27 @@ public sealed class DecimillipedeCard : BossCompanionCard<DecimillipedePet>
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
-        await EliteCompanionAnimation.Trigger<DecimillipedePet>(Owner, "regenerate");
+        await TriggerAllSegments(Owner);
         await CreatureCmd.Heal(Owner.Creature, DynamicVars["Heal"].BaseValue, false);
+    }
+
+    internal static async Task TriggerAllSegments(MegaCrit.Sts2.Core.Entities.Players.Player owner)
+    {
+        if (owner.PlayerCombatState == null)
+            return;
+
+        TriggerSegment(owner.PlayerCombatState.GetPet<DecimillipedePet>());
+        TriggerSegment(owner.PlayerCombatState.GetPet<DecimillipedeMiddlePet>());
+        TriggerSegment(owner.PlayerCombatState.GetPet<DecimillipedeBackPet>());
+        await Cmd.Wait(0.35f);
+    }
+
+    private static void TriggerSegment(Creature? creature)
+    {
+        if (creature is { IsDead: false, Monster: DecimillipedeSegment segment })
+        {
+            segment.SegmentAttack();
+        }
     }
 
     protected override void OnUpgrade() => DynamicVars["Heal"].UpgradeValueBy(4m);
@@ -369,6 +488,37 @@ public sealed class DecimillipedeCard : BossCompanionCard<DecimillipedePet>
 public sealed class DecimillipedePet : BossCompanionPet<DecimillipedeSegmentFront>
 {
     protected override float PetScale => 0.48f;
+
+    public override NCreatureVisuals? CreateCustomVisuals()
+    {
+        NCreatureVisuals visuals = ModelDb.Monster<DecimillipedeSegmentFront>().CreateVisuals();
+        visuals.Scale = new Vector2(-PetScale, PetScale);
+        return CompanionDrag.MakeLinkedDraggable(visuals, "Decimillipede", new Vector2(205f, 0f));
+    }
+}
+
+public sealed class DecimillipedeMiddlePet : BossCompanionPet<DecimillipedeSegmentMiddle>
+{
+    protected override float PetScale => 0.48f;
+
+    public override NCreatureVisuals? CreateCustomVisuals()
+    {
+        NCreatureVisuals visuals = ModelDb.Monster<DecimillipedeSegmentMiddle>().CreateVisuals();
+        visuals.Scale = new Vector2(-PetScale, PetScale);
+        return CompanionDrag.MakeLinkedDraggable(visuals, "Decimillipede", Vector2.Zero);
+    }
+}
+
+public sealed class DecimillipedeBackPet : BossCompanionPet<DecimillipedeSegmentBack>
+{
+    protected override float PetScale => 0.48f;
+
+    public override NCreatureVisuals? CreateCustomVisuals()
+    {
+        NCreatureVisuals visuals = ModelDb.Monster<DecimillipedeSegmentBack>().CreateVisuals();
+        visuals.Scale = new Vector2(-PetScale, PetScale);
+        return CompanionDrag.MakeLinkedDraggable(visuals, "Decimillipede", new Vector2(-205f, 0f));
+    }
 }
 
 [Pool(typeof(NeowCompanionRelicPool))]

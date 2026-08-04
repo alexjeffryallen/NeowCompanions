@@ -53,11 +53,70 @@ public static class PlayerDeathCompanionPatch
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<PhantasmalGardenerPet>(), "Phantasmal Gardener");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<TerrorEelPet>(), "Terror Eel");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<DecimillipedePet>(), "Decimillipede");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<DecimillipedeMiddlePet>(), "Decimillipede middle");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<DecimillipedeBackPet>(), "Decimillipede back");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<EntomancerPet>(), "Entomancer");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<InfestedPrismPet>(), "Infested Prism");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<KnightGangPet>(), "Knight Gang");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<MechaKnightPet>(), "Mecha Knight");
         TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SoulNexusPet>(), "Soul Nexus");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<AssassinRubyRaiderPet>(), "Assassin Ruby Raider");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<AxeRubyRaiderPet>(), "Axe Ruby Raider");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<BruteRubyRaiderPet>(), "Brute Ruby Raider");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<CrossbowRubyRaiderPet>(), "Crossbow Ruby Raider");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<FlyconidPet>(), "Flyconid");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<FogmogPet>(), "Fogmog");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<MawlerPet>(), "Mawler");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<FuzzyWurmCrawlerPet>(), "Fuzzy Wurm Crawler");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<InkletPet>(), "Inklet");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SnappingJaxfruitPet>(), "Snapping Jaxfruit");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SlitheringStranglerPet>(), "Slithering Strangler");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<LeafSlimeSPet>(), "Small Leaf Slime");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<LeafSlimeMPet>(), "Medium Leaf Slime");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<TwigSlimeSPet>(), "Small Twig Slime");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<TwigSlimeMPet>(), "Medium Twig Slime");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<VineShamblerPet>(), "Vine Shambler");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<ChomperPet>(), "Chomper");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<CubexConstructPet>(), "Cubex Construct");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<DampCultistPet>(), "Damp Cultist");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<CalcifiedCultistPet>(), "Calcified Cultist");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<CorpseSlugPet>(), "Corpse Slug");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<TwoTailedRatPet>(), "Two-Tailed Rat");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SewerClamPet>(), "Sewer Clam");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<HauntedShipPet>(), "Haunted Ship");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SludgeSpinnerPet>(), "Sludge Spinner");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<PunchConstructPet>(), "Punch Construct");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<FossilStalkerPet>(), "Fossil Stalker");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<LivingFogPet>(), "Living Fog");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<ParafrightPet>(), "Parafright");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<TunnelerPet>(), "Tunneler");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SpinyToadPet>(), "Spiny Toad");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<StabbotPet>(), "Stabbot");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<HunterKillerPet>(), "Hunter Killer");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<TorchHeadAmalgamPet>(), "Torch Head Amalgam");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<BowlbugEggPet>(), "Egg Bowlbug");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<BowlbugNectarPet>(), "Nectar Bowlbug");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<BowlbugRockPet>(), "Rock Bowlbug");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<BowlbugSilkPet>(), "Silk Bowlbug");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<LouseProgenitorPet>(), "Louse Progenitor");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SlumberingBeetlePet>(), "Slumbering Beetle");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<AxebotPet>(), "Axebot");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<BattleFriendV1Pet>(), "Battle Friend V1"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<BattleFriendV2Pet>(), "Battle Friend V2"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<BattleFriendV3Pet>(), "Battle Friend V3");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<CrusherPet>(), "Crusher");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<DevotedSculptorPet>(), "Devoted Sculptor"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<ExoskeletonPet>(), "Exoskeleton");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<FabricatorPet>(), "Fabricator"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<FlailKnightPet>(), "Flail Knight");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<FrogKnightPet>(), "Frog Knight"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<GasBombPet>(), "Gas Bomb");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<GlobeHeadPet>(), "Globe Head"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<GuardbotPet>(), "Guardbot");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<LivingShieldPet>(), "Living Shield"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<MagiKnightPet>(), "Magi Knight");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<MysteriousKnightPet>(), "Mysterious Knight"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<MytePet>(), "Myte");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<NibbitPet>(), "Nibbit"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<NoisebotPet>(), "Noisebot");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<OvicopterPet>(), "Ovicopter"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<OwlMagistratePet>(), "Owl Magistrate");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<PaelsLegionPet>(), "Pael's Legion"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<RocketPet>(), "Rocket");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<ScrollOfBitingPet>(), "Scroll of Biting"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<SlimedBerserkerPet>(), "Slimed Berserker");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<TheForgottenPet>(), "The Forgotten"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<TheLostPet>(), "The Lost");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<TheObscuraPet>(), "The Obscura"); TriggerToadpoleDeathAnimation(__instance.Player.PlayerCombatState.GetPet<ToadpolePet>());
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<ToughEggPet>(), "Tough Egg"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<TrackerRubyRaiderPet>(), "Tracker Ruby Raider");
+        TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<TurretOperatorPet>(), "Turret Operator"); TriggerDeathAnimation(__instance.Player.PlayerCombatState.GetPet<ZapbotPet>(), "Zapbot");
     }
 
     private static void TriggerDeathAnimation(Creature? pet, string companionName)
@@ -69,6 +128,19 @@ public static class PlayerDeathCompanionPatch
 
         MainFile.Logger.Info($"Triggering {companionName} death animation.");
         _ = CreatureCmd.TriggerAnim(pet, "Dead", 1f);
+    }
+
+    private static void TriggerToadpoleDeathAnimation(Creature? toadpole)
+    {
+        if (toadpole == null || toadpole.IsDead)
+            return;
+
+        MainFile.Logger.Info("Triggering Toadpole native death animation.");
+        var creatureNode = toadpole.GetCreatureNode();
+        if (creatureNode != null)
+            creatureNode.SpineAnimation.SetAnimation("die", loop: false);
+        else
+            _ = CreatureCmd.TriggerAnim(toadpole, "Dead", 1f);
     }
 
     private static void TriggerWrigglerDeathAnimation(Creature? wriggler)

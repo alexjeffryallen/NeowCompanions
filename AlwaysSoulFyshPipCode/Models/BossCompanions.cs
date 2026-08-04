@@ -54,10 +54,25 @@ public abstract class BossCompanionRelic<TPet> : CompanionRelicModel
     }
 }
 
-public abstract class BossCompanionPet<TMonster> : CustomMonsterModel
+public abstract class SourceMonsterCompanionPet<TMonster> : CustomMonsterModel
+    where TMonster : MonsterModel
+{
+    public override IEnumerable<string> AssetPaths => ModelDb.Monster<TMonster>().AssetPaths;
+
+    public override void SetupSkins(MegaSprite spine, MegaSkeleton skeleton)
+    {
+        MonsterModel source = ModelDb.Monster<TMonster>();
+        source.SetupSkins(spine, skeleton);
+        source.OnPhobiaModeToggled(false, spine, skeleton);
+    }
+}
+
+public abstract class BossCompanionPet<TMonster> : SourceMonsterCompanionPet<TMonster>
     where TMonster : MonsterModel
 {
     protected virtual float PetScale => 0.30f;
+
+    protected virtual bool FlipHorizontally => true;
 
     public override int MinInitialHp => 9999;
 
@@ -68,7 +83,7 @@ public abstract class BossCompanionPet<TMonster> : CustomMonsterModel
     public override NCreatureVisuals? CreateCustomVisuals()
     {
         NCreatureVisuals visuals = ModelDb.Monster<TMonster>().CreateVisuals();
-        visuals.Scale = new Vector2(-PetScale, PetScale);
+        visuals.Scale = new Vector2(FlipHorizontally ? -PetScale : PetScale, PetScale);
         return visuals == null ? null : CompanionDrag.MakeDraggable(visuals);
     }
 
@@ -872,13 +887,15 @@ public sealed class KaiserCrabBroadsidePower : CustomPowerModel
     }
 }
 
-public sealed class KaiserCrabPet : CustomMonsterModel
+public sealed class KaiserCrabPet : SourceMonsterCompanionPet<SoulFysh>
 {
     public override int MinInitialHp => 9999;
 
     public override int MaxInitialHp => 9999;
 
     public override bool IsHealthBarVisible => false;
+
+    public override IEnumerable<string> AssetPaths => ModelDb.Monster<SoulFysh>().AssetPaths;
 
     public override NCreatureVisuals? CreateCustomVisuals()
     {
@@ -1504,7 +1521,44 @@ public sealed class ArchitectCard : BossCompanionCard<ArchitectPet>
             ModelDb.Card<InfestedPrismCard>(),
             ModelDb.Card<KnightGangCard>(),
             ModelDb.Card<MechaKnightCard>(),
-            ModelDb.Card<SoulNexusCard>()
+            ModelDb.Card<SoulNexusCard>(),
+            ModelDb.Card<AssassinRubyRaiderCard>(),
+            ModelDb.Card<AxeRubyRaiderCard>(),
+            ModelDb.Card<BruteRubyRaiderCard>(),
+            ModelDb.Card<CrossbowRubyRaiderCard>(),
+            ModelDb.Card<FlyconidCard>(),
+            ModelDb.Card<FogmogCard>(),
+            ModelDb.Card<MawlerCard>(),
+            ModelDb.Card<FuzzyWurmCrawlerCard>(),
+            ModelDb.Card<InkletCard>(),
+            ModelDb.Card<SnappingJaxfruitCard>(),
+            ModelDb.Card<SlitheringStranglerCard>(),
+            ModelDb.Card<LeafSlimeSCard>(),
+            ModelDb.Card<LeafSlimeMCard>(),
+            ModelDb.Card<TwigSlimeSCard>(),
+            ModelDb.Card<TwigSlimeMCard>(),
+            ModelDb.Card<VineShamblerCard>(),
+            ModelDb.Card<ChomperCard>(),
+            ModelDb.Card<CubexConstructCard>(),
+            ModelDb.Card<DampCultistCard>(),
+            ModelDb.Card<CalcifiedCultistCard>(),
+            ModelDb.Card<CorpseSlugCard>(), ModelDb.Card<TwoTailedRatCard>(),
+            ModelDb.Card<SewerClamCard>(), ModelDb.Card<HauntedShipCard>(),
+            ModelDb.Card<SludgeSpinnerCard>(), ModelDb.Card<PunchConstructCard>(),
+            ModelDb.Card<FossilStalkerCard>(), ModelDb.Card<LivingFogCard>(),
+            ModelDb.Card<ParafrightCard>(), ModelDb.Card<TunnelerCard>(),
+            ModelDb.Card<SpinyToadCard>(), ModelDb.Card<StabbotCard>(),
+            ModelDb.Card<HunterKillerCard>(), ModelDb.Card<TorchHeadAmalgamCard>(),
+            ModelDb.Card<BowlbugEggCard>(), ModelDb.Card<BowlbugNectarCard>(),
+            ModelDb.Card<BowlbugRockCard>(), ModelDb.Card<BowlbugSilkCard>(),
+            ModelDb.Card<LouseProgenitorCard>(), ModelDb.Card<SlumberingBeetleCard>(),
+            ModelDb.Card<AxebotCard>(), ModelDb.Card<BattleFriendV1Card>(), ModelDb.Card<BattleFriendV2Card>(), ModelDb.Card<BattleFriendV3Card>(),
+            ModelDb.Card<DevotedSculptorCard>(), ModelDb.Card<ExoskeletonCard>(), ModelDb.Card<FabricatorCard>(), ModelDb.Card<FlailKnightCard>(),
+            ModelDb.Card<FrogKnightCard>(), ModelDb.Card<GasBombCard>(), ModelDb.Card<GlobeHeadCard>(), ModelDb.Card<GuardbotCard>(), ModelDb.Card<LivingShieldCard>(),
+            ModelDb.Card<MagiKnightCard>(), ModelDb.Card<MysteriousKnightCard>(), ModelDb.Card<MyteCard>(), ModelDb.Card<NibbitCard>(), ModelDb.Card<NoisebotCard>(),
+            ModelDb.Card<OvicopterCard>(), ModelDb.Card<OwlMagistrateCard>(), ModelDb.Card<PaelsLegionCard>(), ModelDb.Card<ScrollOfBitingCard>(),
+            ModelDb.Card<SlimedBerserkerCard>(), ModelDb.Card<TheForgottenCard>(), ModelDb.Card<TheLostCard>(), ModelDb.Card<TheObscuraCard>(), ModelDb.Card<ToadpoleCard>(),
+            ModelDb.Card<ToughEggCard>(), ModelDb.Card<TrackerRubyRaiderCard>(), ModelDb.Card<TurretOperatorCard>(), ModelDb.Card<ZapbotCard>()
         ];
     }
 }
@@ -1614,6 +1668,8 @@ public sealed class RustcladPet : CustomMonsterModel
 
     public override bool IsHealthBarVisible => false;
 
+    public override IEnumerable<string> AssetPaths => ModelDb.Character<Ironclad>().AssetPaths;
+
     public override NCreatureVisuals? CreateCustomVisuals()
     {
         NCreatureVisuals visuals = ModelDb.Character<Ironclad>().CreateVisuals();
@@ -1652,6 +1708,8 @@ public abstract class CharacterCompanionPet<TCharacter> : CustomMonsterModel
     public override int MinInitialHp => 9999;
     public override int MaxInitialHp => 9999;
     public override bool IsHealthBarVisible => false;
+
+    public override IEnumerable<string> AssetPaths => ModelDb.Character<TCharacter>().AssetPaths;
 
     public override NCreatureVisuals? CreateCustomVisuals()
     {
@@ -2762,7 +2820,7 @@ public sealed class GildedPagePet : CharacterCompanionPet<Regent>
     protected override float HueShift => 0.36f;
 }
 
-public abstract class ElementalByrdpipPet : CustomMonsterModel
+public abstract class ElementalByrdpipPet : SourceMonsterCompanionPet<MegaCrit.Sts2.Core.Models.Monsters.Byrdpip>
 {
     protected abstract float HueShift { get; }
     protected abstract Color Tint { get; }
@@ -2772,6 +2830,9 @@ public abstract class ElementalByrdpipPet : CustomMonsterModel
     public override int MinInitialHp => 9999;
     public override int MaxInitialHp => 9999;
     public override bool IsHealthBarVisible => false;
+
+    public override IEnumerable<string> AssetPaths =>
+        ModelDb.Monster<MegaCrit.Sts2.Core.Models.Monsters.Byrdpip>().AssetPaths;
 
     public override NCreatureVisuals? CreateCustomVisuals()
     {
@@ -3306,7 +3367,64 @@ internal static class CompanionAnimation
             CreateAttackCandidate(owner.PlayerCombatState.GetPet<InfestedPrismPet>(), "AttackDouble"),
             CreateAttackCandidate(owner.PlayerCombatState.GetPet<KnightGangPet>(), "AttackSword"),
             CreateAttackCandidate(owner.PlayerCombatState.GetPet<MechaKnightPet>(), "attack_cleave"),
-            CreateAttackCandidate(owner.PlayerCombatState.GetPet<SoulNexusPet>(), "Attack")
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<SoulNexusPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<AssassinRubyRaiderPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<AxeRubyRaiderPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<BruteRubyRaiderPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<CrossbowRubyRaiderPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<FlyconidPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<FogmogPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<MawlerPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<FuzzyWurmCrawlerPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<InkletPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<SnappingJaxfruitPet>(), "Cast"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<SlitheringStranglerPet>(), "AttackDefendTrigger"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<LeafSlimeSPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<LeafSlimeMPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<TwigSlimeSPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<TwigSlimeMPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<VineShamblerPet>(), "Chomp"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<ChomperPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<CubexConstructPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<DampCultistPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<CalcifiedCultistPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<CorpseSlugPet>(), "DoubleAttackTrigger"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<TwoTailedRatPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<SewerClamPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<HauntedShipPet>(), "AttackTriple"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<SludgeSpinnerPet>(), "slam"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<PunchConstructPet>(), "DoubleAttack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<FossilStalkerPet>(), "AttackDouble"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<LivingFogPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<ParafrightPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<TunnelerPet>(), "BurrowAttack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<SpinyToadPet>(), "lick"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<StabbotPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<HunterKillerPet>(), "TripleAttack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<TorchHeadAmalgamPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<BowlbugEggPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<BowlbugNectarPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<BowlbugRockPet>(), "headbutt"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<BowlbugSilkPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<LouseProgenitorPet>(), "Web"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<SlumberingBeetlePet>(), "Rollout"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<AxebotPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<BattleFriendV1Pet>(), "Idle"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<BattleFriendV2Pet>(), "Idle"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<BattleFriendV3Pet>(), "Idle"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<CrusherPet>(), "attack_heavy"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<DevotedSculptorPet>(), "Attack"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<ExoskeletonPet>(), "HeavyAttack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<FabricatorPet>(), "Attack"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<FlailKnightPet>(), "FlailAttack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<FrogKnightPet>(), "Lash"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<GasBombPet>(), "ExplodeTrigger"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<GlobeHeadPet>(), "Attack"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<GuardbotPet>(), "Cast"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<LivingShieldPet>(), "Attack"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<MagiKnightPet>(), "BombCast"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<MysteriousKnightPet>(), "RamAttack"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<MytePet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<NibbitPet>(), "Attack"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<NoisebotPet>(), "Cast"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<OvicopterPet>(), "Attack"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<OwlMagistratePet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<PaelsLegionPet>(), "WakeUpTrigger"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<RocketPet>(), "attack_med"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<ScrollOfBitingPet>(), "ATTACK_DOUBLE"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<SlimedBerserkerPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<TheForgottenPet>(), "Attack"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<TheLostPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<TheObscuraPet>(), "Attack"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<ToadpolePet>(), "AttackTriple"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<ToughEggPet>(), "Attack"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<TrackerRubyRaiderPet>(), "Attack"),
+            CreateAttackCandidate(owner.PlayerCombatState.GetPet<TurretOperatorPet>(), "Attack"), CreateAttackCandidate(owner.PlayerCombatState.GetPet<ZapbotPet>(), "Attack")
         ];
 
         candidates = candidates
@@ -3321,6 +3439,12 @@ internal static class CompanionAnimation
         }
 
         AttackAnimationCandidate candidate = owner.RunState.Rng.CombatTargets.NextItem(candidates) ?? candidates[0];
+        if (candidate.Pet.Monster is DecimillipedeSegment)
+        {
+            await DecimillipedeCard.TriggerAllSegments(owner);
+            return;
+        }
+
         if (candidate.AnimationNames.Length == 0)
         {
             await KaiserCrabCompanionVisuals.PlayRandomAttack();
